@@ -1,0 +1,103 @@
+
+cmake_minimum_required ( VERSION 2.8.12 )
+
+# project
+project ( wilton_server CXX )
+
+# dep options
+set ( staticlib_pion_USE_LOG4CPLUS ON CACHE BOOL "Use log4cplus lib for logging" )
+set ( staticlib_pion_USE_OPENSSL ON CACHE BOOL "Use OpenSSL lib for https" )
+
+# dependencies add
+if ( STATICLIB_TOOLCHAIN MATCHES "(android|windows|macosx)_.+" )
+    staticlib_add_subdirectory ( ${STATICLIB_DEPS}/external_asio )
+endif ( ) 
+if ( WILTON_BUILD_FLAVOUR MATCHES "wheezy" )
+    staticlib_add_subdirectory ( ${STATICLIB_DEPS}/external_asio )
+endif ( )
+staticlib_add_subdirectory ( ${STATICLIB_DEPS}/staticlib_pion )
+staticlib_add_subdirectory ( ${STATICLIB_DEPS}/staticlib_mustache )
+
+# dependencies check
+set ( ${PROJECT_NAME}_DEPS
+        staticlib_config
+        staticlib_support
+        staticlib_io
+        staticlib_ranges
+        staticlib_pion
+        staticlib_json
+        staticlib_unzip
+        staticlib_utils
+        staticlib_mustache
+        staticlib_tinydir
+        staticlib_pimpl
+        openssl )
+staticlib_pkg_check_modules ( ${PROJECT_NAME}_DEPS_PC REQUIRED ${PROJECT_NAME}_DEPS )
+
+# library
+set ( ${PROJECT_NAME}_PLATFORM_SRC ) 
+set ( ${PROJECT_NAME}_RESFILE )
+set ( ${PROJECT_NAME}_DEFFILE )
+if ( STATICLIB_TOOLCHAIN MATCHES "windows_.+" )
+    configure_file ( ${WILTON_DIR}/resources/buildres/wilton_module.rc
+            ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.rc )
+    set ( ${PROJECT_NAME}_RESFILE ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.rc )
+    set ( ${PROJECT_NAME}_DEFFILE ${CMAKE_CURRENT_LIST_DIR}/resosurces/${PROJECT_NAME}.def )
+    # header-only use
+    list ( REMOVE_ITEM ${PROJECT_NAME}_DEPS_PC_LIBRARIES log4cplus )
+    list ( REMOVE_ITEM ${PROJECT_NAME}_DEPS_PC_LIBRARIES openssl )
+endif ( )
+
+add_library ( ${PROJECT_NAME} SHARED
+        # mustache
+        ${CMAKE_CURRENT_LIST_DIR}/src/mustache/wilton_mustache.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/mustache/wiltoncall_mustache.cpp
+        # server
+        ${CMAKE_CURRENT_LIST_DIR}/src/server/request.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/server/response_writer.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/server/server.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/server/wilton_server.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/server/wiltoncall_server.cpp
+        # export
+        ${CMAKE_CURRENT_LIST_DIR}/src/wiltoncall_server.cpp
+        ${${PROJECT_NAME}_RESFILE}
+        ${${PROJECT_NAME}_DEFFILE} )
+
+target_link_libraries ( ${PROJECT_NAME} PRIVATE
+        wilton_core
+        wilton_crypto
+        wilton_loader
+        wilton_logging
+        wilton_zip
+        ${${PROJECT_NAME}_DEPS_PC_LIBRARIES} )
+if ( STATICLIB_TOOLCHAIN MATCHES "(linux|maxosx)_.+" )
+    target_link_libraries ( ${PROJECT_NAME} PRIVATE
+            crypto ssl )
+endif ( )
+
+target_include_directories ( ${PROJECT_NAME} BEFORE PRIVATE 
+        ${CMAKE_CURRENT_LIST_DIR}/src
+        ${CMAKE_CURRENT_LIST_DIR}/include
+        ${WILTON_DIR}/core/include
+        ${WILTON_DIR}/modules/wilton_loader/include
+        ${WILTON_DIR}/modules/wilton_logging/include
+        ${${PROJECT_NAME}_DEPS_PC_INCLUDE_DIRS} )
+
+target_compile_options ( ${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_DEPS_PC_CFLAGS_OTHER} )
+
+if ( STATICLIB_TOOLCHAIN MATCHES "android_.+" )
+    set_property ( TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY LINK_FLAGS "-Wl,-soname,lib${PROJECT_NAME}.so" )
+elseif ( STATICLIB_TOOLCHAIN MATCHES "windows_.+" )
+    target_link_libraries ( ${PROJECT_NAME} PRIVATE wtsapi32 )
+    set_property ( TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY LINK_FLAGS "/manifest:no" )
+elseif ( STATICLIB_TOOLCHAIN MATCHES "macosx_.+" )
+    get_property ( ${PROJECT_NAME}_LINK_FLAGS TARGET ${PROJECT_NAME} PROPERTY LINK_FLAGS )
+    set_property ( TARGET ${PROJECT_NAME} PROPERTY LINK_FLAGS "-L${${PROJECT_NAME}_DEPS_PC_openssl_LIBDIR} ${${PROJECT_NAME}_LINK_FLAGS}" )
+endif ( )
+
+# pkg-config
+set ( ${PROJECT_NAME}_PC_CFLAGS "-I${CMAKE_CURRENT_LIST_DIR}/include" )
+set ( ${PROJECT_NAME}_PC_LIBS "-L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} -l${PROJECT_NAME}" )
+staticlib_list_to_string ( ${PROJECT_NAME}_PC_REQUIRES_PRIVATE "" ${PROJECT_NAME}_DEPS )
+configure_file ( ${WILTON_DIR}/resources/buildres/pkg-config.in 
+        ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/pkgconfig/${PROJECT_NAME}.pc )
