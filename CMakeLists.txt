@@ -42,10 +42,11 @@ if ( STATICLIB_TOOLCHAIN MATCHES "windows_.+" )
     configure_file ( ${WILTON_DIR}/resources/buildres/wilton_module.rc
             ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.rc )
     set ( ${PROJECT_NAME}_RESFILE ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.rc )
-    set ( ${PROJECT_NAME}_DEFFILE ${CMAKE_CURRENT_LIST_DIR}/resosurces/${PROJECT_NAME}.def )
+    set ( ${PROJECT_NAME}_DEFFILE ${CMAKE_CURRENT_LIST_DIR}/resources/${PROJECT_NAME}.def )
     # header-only use
     list ( REMOVE_ITEM ${PROJECT_NAME}_DEPS_PC_LIBRARIES log4cplus )
     list ( REMOVE_ITEM ${PROJECT_NAME}_DEPS_PC_LIBRARIES openssl )
+    list ( REMOVE_ITEM ${PROJECT_NAME}_DEPS_PC_LIBRARIES z )
 endif ( )
 
 add_library ( ${PROJECT_NAME} SHARED
