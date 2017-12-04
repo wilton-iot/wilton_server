@@ -30,8 +30,11 @@ set ( ${PROJECT_NAME}_DEPS
         staticlib_utils
         staticlib_mustache
         staticlib_tinydir
-        staticlib_pimpl
-        openssl )
+        staticlib_pimpl )
+# todo: removeme
+if ( STATICLIB_TOOLCHAIN MATCHES "(macosx)_.+" )
+    list ( APPEND ${PROJECT_NAME}_DEPS openssl )
+endif ( )
 staticlib_pkg_check_modules ( ${PROJECT_NAME}_DEPS_PC REQUIRED ${PROJECT_NAME}_DEPS )
 
 # library
