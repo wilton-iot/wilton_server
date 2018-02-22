@@ -297,7 +297,7 @@ support::buffer server_stop(sl::io::span<const char> data) {
         sreg->put(pa.first, std::move(pa.second));
         support::throw_wilton_error(err, TRACEMSG(err));
     }
-    return support::make_empty_buffer();
+    return support::make_null_buffer();
 }
 
 support::buffer request_get_metadata(sl::io::span<const char> data) {
@@ -446,7 +446,7 @@ support::buffer request_set_response_metadata(sl::io::span<const char> data) {
     char* err = wilton_Request_set_response_metadata(request, metadata.c_str(), static_cast<int>(metadata.length()));
     rreg->put(request);
     if (nullptr != err) support::throw_wilton_error(err, TRACEMSG(err));
-    return support::make_empty_buffer();
+    return support::make_null_buffer();
 }
 
 support::buffer request_send_response(sl::io::span<const char> data) {
@@ -476,7 +476,7 @@ support::buffer request_send_response(sl::io::span<const char> data) {
     char* err = wilton_Request_send_response(request, request_data.c_str(), static_cast<int>(request_data.length()));
     rreg->put(request);
     if (nullptr != err) support::throw_wilton_error(err, TRACEMSG(err));
-    return support::make_empty_buffer();
+    return support::make_null_buffer();
 }
 
 support::buffer request_send_temp_file(sl::io::span<const char> data) {
@@ -513,7 +513,7 @@ support::buffer request_send_temp_file(sl::io::span<const char> data) {
             });
     rreg->put(request);
     if (nullptr != err) support::throw_wilton_error(err, TRACEMSG(err));
-    return support::make_empty_buffer();
+    return support::make_null_buffer();
 }
 
 support::buffer request_send_mustache(sl::io::span<const char> data) {
@@ -552,7 +552,7 @@ support::buffer request_send_mustache(sl::io::span<const char> data) {
             values.c_str(), static_cast<int>(values.length()));
     rreg->put(request);
     if (nullptr != err) support::throw_wilton_error(err, TRACEMSG(err));
-    return support::make_empty_buffer();
+    return support::make_null_buffer();
 }
 
 support::buffer request_send_later(sl::io::span<const char> data) {
@@ -612,7 +612,7 @@ support::buffer request_send_with_response_writer(sl::io::span<const char> data)
     // call wilton
     char* err = wilton_ResponseWriter_send(writer, request_data.c_str(), static_cast<int>(request_data.length()));
     if (nullptr != err) support::throw_wilton_error(err, TRACEMSG(err));
-    return support::make_empty_buffer();
+    return support::make_null_buffer();
 }
 
 } // namespace

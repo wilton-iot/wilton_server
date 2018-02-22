@@ -32,7 +32,7 @@
 #include "staticlib/json.hpp"
 #include "staticlib/utils.hpp"
 
-#include "wilton/support/alloc_copy.hpp"
+#include "wilton/support/alloc.hpp"
 
 char* wilton_render_mustache /* noexcept */ (
         const char* template_text,

@@ -30,7 +30,7 @@
 #include "staticlib/json.hpp"
 #include "staticlib/utils.hpp"
 
-#include "wilton/support/alloc_copy.hpp"
+#include "wilton/support/alloc.hpp"
 #include "wilton/support/buffer.hpp"
 
 #include "server/http_path.hpp"
@@ -216,8 +216,8 @@ char* wilton_Request_get_request_form_data(wilton_Request* request, char** data_
     try {
         sl::json::value json = request->impl().get_request_form_data();
         wilton::support::buffer res = wilton::support::make_json_buffer(json);
-        *data_out = res.value().data();
-        *data_len_out = static_cast<int>(res.value().size());
+        *data_out = res.data();
+        *data_len_out = res.size_int();
         return nullptr;
     } catch (const std::exception& e) {
         return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));
