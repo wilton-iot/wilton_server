@@ -18,8 +18,10 @@ cmake_minimum_required ( VERSION 2.8.12 )
 project ( wilton_server CXX )
 
 # dep options
-set ( staticlib_pion_USE_LOG4CPLUS ON CACHE BOOL "Use log4cplus lib for logging" )
+set ( staticlib_pion_USE_WILTON_LOGGING ON CACHE BOOL "Use wilton_logging lib for logging" )
 set ( staticlib_pion_USE_OPENSSL ON CACHE BOOL "Use OpenSSL lib for https" )
+set ( staticlib_pion_WILTON_INCLUDE ${WILTON_DIR}/core/include CACHE STRING "" )
+set ( staticlib_pion_WILTON_LOGGING_INCLUDE ${WILTON_DIR}/modules/wilton_logging/include CACHE STRING "" )
 
 # dependencies add
 if ( STATICLIB_TOOLCHAIN MATCHES "(android|windows|macosx)_.+" )
