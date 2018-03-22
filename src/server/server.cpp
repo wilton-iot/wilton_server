@@ -54,21 +54,24 @@ namespace { // anonymous
 
 using partmap_type = const std::map<std::string, std::string>&;
 
-void handle_not_found_request(sl::pion::http_request_ptr& req, sl::pion::tcp_connection_ptr& conn) {
-    static const std::string NOT_FOUND_MSG_START = R"({
+const std::string mustache_ext = ".mustache";
+
+const std::string not_found_msg_start = R"({
     "code": 404,
     "message": "Not Found",
     "description": "The requested URL: [)";
-    static const std::string NOT_FOUND_MSG_FINISH = R"(] was not found on this server."
+const std::string not_found_msg_finish = R"(] was not found on this server."
 })";
+
+void handle_not_found_request(sl::pion::http_request_ptr& req, sl::pion::tcp_connection_ptr& conn) {
     auto writer = sl::pion::http_response_writer::create(conn, req);
     writer->get_response().set_status_code(404);
     writer->get_response().set_status_message("Not Found");
-    writer->write_no_copy(NOT_FOUND_MSG_START);
+    writer->write_no_copy(not_found_msg_start);
     auto res = req->get_resource();
     std::replace(res.begin(), res.end(), '"', '\'');
     writer->write_move(std::move(res));
-    writer->write_no_copy(NOT_FOUND_MSG_FINISH);
+    writer->write_no_copy(not_found_msg_finish);
     writer->send();
 }
 
@@ -189,12 +192,11 @@ private:
     }
     
     static std::map<std::string, std::string> load_partials(const serverconf::mustache_config& cf) {
-        static std::string MUSTACHE_EXT = ".mustache";
         std::map<std::string, std::string> res;
         for (const std::string& dirpath : cf.partialsDirs) {
             for (const sl::tinydir::path& tf : sl::tinydir::list_directory(dirpath)) {
-                if (!sl::utils::ends_with(tf.filename(), MUSTACHE_EXT)) continue;
-                std::string name = std::string(tf.filename().data(), tf.filename().length() - MUSTACHE_EXT.length());
+                if (!sl::utils::ends_with(tf.filename(), mustache_ext)) continue;
+                std::string name = std::string(tf.filename().data(), tf.filename().length() - mustache_ext.length());
                 std::string val = read_file(tf);
                 auto pa = res.insert(std::make_pair(std::move(name), std::move(val)));
                 if (!pa.second) throw support::exception(TRACEMSG(

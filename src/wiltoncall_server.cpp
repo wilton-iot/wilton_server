@@ -69,12 +69,15 @@ support::buffer request_send_later(sl::io::span<const char> data);
 
 support::buffer request_send_with_response_writer(sl::io::span<const char> data);
 
+void initialize();
+
 } // namespace
 }
 
 extern "C" char* wilton_module_init() {
     try {
         // server
+        wilton::server::initialize();
         wilton::support::register_wiltoncall("server_create", wilton::server::server_create);
         wilton::support::register_wiltoncall("server_stop", wilton::server::server_stop);
         wilton::support::register_wiltoncall("request_get_metadata", wilton::server::request_get_metadata);

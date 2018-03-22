@@ -112,11 +112,11 @@ public:
     }
 };
 
-
+// initialized from wilton_module_init
 std::shared_ptr<support::handle_registry<wilton_Request>> shared_request_registry() {
     static auto registry = std::make_shared<support::handle_registry<wilton_Request>>(
         [] (wilton_Request* request) STATICLIB_NOEXCEPT {
-            static std::string conf = sl::json::dumps({
+            std::string conf = sl::json::dumps({
                 { "statusCode", 503 },
                 { "statusMessage", "Service Unavailable" }
             });
@@ -126,9 +126,8 @@ std::shared_ptr<support::handle_registry<wilton_Request>> shared_request_registr
     return registry;
 }
 
+// initialized from wilton_module_init
 std::shared_ptr<support::payload_handle_registry<wilton_Server, server_ctx>> shared_server_registry() {
-    // init/destroy order attempt, todo: verifyme
-    shared_request_registry();
     static auto registry = std::make_shared<support::payload_handle_registry<wilton_Server, server_ctx>>(
         [] (wilton_Server * server) STATICLIB_NOEXCEPT {
             wilton_Server_stop(server);
@@ -136,6 +135,7 @@ std::shared_ptr<support::payload_handle_registry<wilton_Server, server_ctx>> sha
     return registry;
 }
 
+// initialized from wilton_module_init
 std::shared_ptr<support::handle_registry<wilton_ResponseWriter>> shared_response_writer_registry() {
     static auto registry = std::make_shared<support::handle_registry<wilton_ResponseWriter>>(
         [] (wilton_ResponseWriter* writer) STATICLIB_NOEXCEPT {
@@ -180,7 +180,7 @@ void send_system_error(int64_t requestHandle, std::string errmsg) {
     auto rreg = shared_request_registry();
     wilton_Request* request = rreg->remove(requestHandle);
     if (nullptr != request) {
-        static std::string conf = sl::json::dumps({
+        std::string conf = sl::json::dumps({
             { "statusCode", 500 },
             { "statusMessage", "Internal Server Error" }
         });
@@ -613,6 +613,12 @@ support::buffer request_send_with_response_writer(sl::io::span<const char> data)
     char* err = wilton_ResponseWriter_send(writer, request_data.c_str(), static_cast<int>(request_data.length()));
     if (nullptr != err) support::throw_wilton_error(err, TRACEMSG(err));
     return support::make_null_buffer();
+}
+
+void initialize() {
+    shared_request_registry();
+    shared_server_registry();
+    shared_response_writer_registry();
 }
 
 } // namespace
