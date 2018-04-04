@@ -61,7 +61,6 @@ public:
     conf(std::make_shared<serverconf::document_root>(conf.clone())),
     idx(std::make_shared<sl::unzip::file_index>(conf.zipPath)) { }    
     
-    // todo: error messages format
     // todo: path checks
     void operator()(sl::pion::http_request_ptr& req, sl::pion::tcp_connection_ptr& conn) {
         auto resp = sl::pion::http_response_writer::create(conn, req);
@@ -75,9 +74,9 @@ public:
         } else {
             resp->get_response().set_status_code(sl::pion::http_request::RESPONSE_CODE_NOT_FOUND);
             resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND);
-            resp << sl::pion::http_request::RESPONSE_CODE_NOT_FOUND << " "
-                    << sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND << ":"
-                    << " [" << url_path << "]\n";
+            resp << "{\n    \"code\": " << sl::pion::http_request::RESPONSE_CODE_NOT_FOUND << ",\n" <<
+                       "    \"message\": \"" << sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND << "\",\n" <<
+                       "    \"description\": \"The requested URL: [" << url_path  << "] was not found on this server.\"\n}";
             resp->send();
         }
     }

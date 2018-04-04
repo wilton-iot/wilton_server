@@ -63,7 +63,6 @@ public:
                 "Invalid empty 'dirPath' specified"));
     }
     
-    // todo: error messages format
     // todo: path checks
     void operator()(sl::pion::http_request_ptr& req, sl::pion::tcp_connection_ptr& conn) {
         auto resp = sl::pion::http_response_writer::create(conn, req);
@@ -71,9 +70,9 @@ public:
         if (url_path.find("..") != std::string::npos) {
             resp->get_response().set_status_code(sl::pion::http_request::RESPONSE_CODE_BAD_REQUEST);
             resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_BAD_REQUEST);
-            resp << sl::pion::http_request::RESPONSE_CODE_BAD_REQUEST << " "
-                    << sl::pion::http_request::RESPONSE_MESSAGE_BAD_REQUEST << ":"
-                    << " [" << url_path << "]\n";
+            resp << "{\n    \"code\": " << sl::pion::http_request::RESPONSE_CODE_BAD_REQUEST << ",\n" <<
+                       "    \"message\": \"" << sl::pion::http_request::RESPONSE_MESSAGE_BAD_REQUEST << "\",\n" <<
+                       "    \"description\": \"The requested URL: [" << url_path  << "] was not found on this server.\"\n}";
             resp->send();
         } else {
             try {
@@ -86,9 +85,9 @@ public:
             } catch (const std::exception&) {
                 resp->get_response().set_status_code(sl::pion::http_request::RESPONSE_CODE_NOT_FOUND);
                 resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND);
-                resp << sl::pion::http_request::RESPONSE_CODE_NOT_FOUND << " "
-                        << sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND << ":"
-                        << " [" << url_path << "]\n";
+                resp << "{\n    \"code\": " << sl::pion::http_request::RESPONSE_CODE_NOT_FOUND << ",\n" <<
+                           "    \"message\": \"" << sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND << "\",\n" <<
+                           "    \"description\": \"The requested URL: [" << url_path  << "] was not found on this server.\"\n}";
                 resp->send();
             }
         }
