@@ -32,6 +32,8 @@
 
 namespace wilton {
 
+// todo: drop me
+
 // Mustache
 namespace mustache {
 
@@ -91,8 +93,8 @@ extern "C" char* wilton_module_init() {
         wilton::support::register_wiltoncall("request_send_later", wilton::server::request_send_later);
         wilton::support::register_wiltoncall("request_send_with_response_writer", wilton::server::request_send_with_response_writer);
         // mustache
-        wilton::support::register_wiltoncall("mustache_render", wilton::mustache::mustache_render);
-        wilton::support::register_wiltoncall("mustache_render_file", wilton::mustache::mustache_render_file);
+//        wilton::support::register_wiltoncall("mustache_render", wilton::mustache::mustache_render);
+//        wilton::support::register_wiltoncall("mustache_render_file", wilton::mustache::mustache_render_file);
         return nullptr;
     } catch (const std::exception& e) {
         return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));
