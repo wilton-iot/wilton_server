@@ -27,6 +27,7 @@ EXPORTS
     wilton_Request_send_file
     wilton_Request_send_mustache
     wilton_Request_send_later
+    wilton_ResponseWriter_set_metadata
     wilton_ResponseWriter_send
 
     wilton_render_mustache

@@ -183,6 +183,11 @@ char* wilton_Request_send_later(
         wilton_Request* request,
         wilton_ResponseWriter** writer_out);
 
+char* wilton_ResponseWriter_set_metadata(
+        wilton_ResponseWriter* writer,
+        const char* metadata_json,
+        int metadata_json_len);
+
 char* wilton_ResponseWriter_send(
         wilton_ResponseWriter* writer,
         const char* data,

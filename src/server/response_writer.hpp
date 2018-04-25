@@ -30,6 +30,8 @@
 
 #include "wilton/support/exception.hpp"
 
+#include "serverconf/response_metadata.hpp"
+
 namespace wilton {
 namespace server {
 
@@ -47,6 +49,8 @@ public:
      */
     PIMPL_CONSTRUCTOR(response_writer)
 
+    void set_metadata(serverconf::response_metadata rm);
+    
     void send(const char* data, uint32_t data_len);
   
     // private api

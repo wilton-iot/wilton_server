@@ -35,14 +35,23 @@ class response_writer::impl : public staticlib::pimpl::object::impl {
 public:
     impl(void* /* sl::pion::http_response_writer_ptr* */ writer) :
     writer(std::move(*static_cast<sl::pion::http_response_writer_ptr*> (writer))) { }    
-    
+
+    void set_metadata(response_writer&, serverconf::response_metadata rm) {
+        writer->get_response().set_status_code(rm.statusCode);
+        writer->get_response().set_status_message(rm.statusMessage);
+        for (const serverconf::header& ha : rm.headers) {
+            writer->get_response().change_header(ha.name, ha.value);
+        }
+    }
+
     void send(response_writer&, const char* data, uint32_t data_len) {
         writer->write(data, data_len);
         writer->send();
     }
-    
+
 };
 PIMPL_FORWARD_CONSTRUCTOR(response_writer, (void*), (), support::exception)
+PIMPL_FORWARD_METHOD(response_writer, void, set_metadata, (serverconf::response_metadata), (), support::exception)
 PIMPL_FORWARD_METHOD(response_writer, void, send, (const char*)(uint32_t), (), support::exception)
 
 } // namespace

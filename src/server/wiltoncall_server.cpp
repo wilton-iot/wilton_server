@@ -586,6 +586,37 @@ support::buffer request_send_later(sl::io::span<const char> data) {
     });
 }
 
+support::buffer request_set_metadata_with_response_writer(sl::io::span<const char> data) {
+    // json parse
+    auto json = sl::json::load(data);
+    int64_t handle = -1;
+    std::string metadata = sl::utils::empty_string();
+    for (const sl::json::field& fi : json.as_object()) {
+        auto& name = fi.name();
+        if ("responseWriterHandle" == name) {
+            handle = fi.as_int64_or_throw(name);
+        } else if ("metadata" == name) {
+            metadata = fi.val().dumps();
+        } else {
+            throw support::exception(TRACEMSG("Unknown data field: [" + name + "]"));
+        }
+    }
+    if (-1 == handle) throw support::exception(TRACEMSG(
+            "Required parameter 'responseWriterHandle' not specified"));
+    if (metadata.empty()) throw support::exception(TRACEMSG(
+            "Required parameter 'metadata' not specified"));
+    // get handle
+    auto wreg = shared_response_writer_registry();
+    wilton_ResponseWriter* writer = wreg->remove(handle);
+    if (nullptr == writer) throw support::exception(TRACEMSG(
+            "Invalid 'responseWriterHandle' parameter specified"));
+    // call wilton
+    char* err = wilton_ResponseWriter_set_metadata(writer, metadata.c_str(), static_cast<int>(metadata.length()));
+    wreg->put(writer);
+    if (nullptr != err) support::throw_wilton_error(err, TRACEMSG(err));
+    return support::make_null_buffer();
+}
+
 support::buffer request_send_with_response_writer(sl::io::span<const char> data) {
     // json parse
     auto json = sl::json::load(data);

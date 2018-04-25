@@ -339,6 +339,26 @@ char* wilton_Request_send_later(
     }
 }
 
+// TODO: fixme json copy
+char* wilton_ResponseWriter_set_metadata(
+        wilton_ResponseWriter* writer,
+        const char* metadata_json,
+        int metadata_json_len) /* noexcept */ {
+    if (nullptr == writer) return wilton::support::alloc_copy(TRACEMSG("Null 'writer' parameter specified"));
+    if (nullptr == metadata_json) return wilton::support::alloc_copy(TRACEMSG("Null 'metadata_json' parameter specified"));
+    if (!sl::support::is_uint32_positive(metadata_json_len)) return wilton::support::alloc_copy(TRACEMSG(
+            "Invalid 'metadata_json_len' parameter specified: [" + sl::support::to_string(metadata_json_len) + "]"));
+    try {
+        sl::json::value json = sl::json::load({metadata_json, metadata_json_len});
+        wilton::serverconf::response_metadata rm{json};
+        writer->impl().set_metadata(std::move(rm));
+        return nullptr;
+    } catch (const std::exception& e) {
+        return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));
+    }
+
+}
+
 char* wilton_ResponseWriter_send(
         wilton_ResponseWriter* writer,
         const char* data,

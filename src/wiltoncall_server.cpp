@@ -69,6 +69,8 @@ support::buffer request_send_mustache(sl::io::span<const char> data);
 
 support::buffer request_send_later(sl::io::span<const char> data);
 
+support::buffer request_set_metadata_with_response_writer(sl::io::span<const char> data);
+
 support::buffer request_send_with_response_writer(sl::io::span<const char> data);
 
 void initialize();
@@ -91,6 +93,7 @@ extern "C" char* wilton_module_init() {
         wilton::support::register_wiltoncall("request_send_temp_file", wilton::server::request_send_temp_file);
         wilton::support::register_wiltoncall("request_send_mustache", wilton::server::request_send_mustache);
         wilton::support::register_wiltoncall("request_send_later", wilton::server::request_send_later);
+        wilton::support::register_wiltoncall("request_set_metadata_with_response_writer", wilton::server::request_set_metadata_with_response_writer);
         wilton::support::register_wiltoncall("request_send_with_response_writer", wilton::server::request_send_with_response_writer);
         // mustache
 //        wilton::support::register_wiltoncall("mustache_render", wilton::mustache::mustache_render);
