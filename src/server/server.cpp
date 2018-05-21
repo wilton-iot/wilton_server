@@ -133,8 +133,8 @@ public:
             } else throw support::exception(TRACEMSG(
                     "Invalid 'documentRoot': [" + dr.to_json().dumps() + "]"));
         }
-        server_ptr->get_scheduler().set_thread_stop_hook([](const std::thread::id& tid) STATICLIB_NOEXCEPT {
-            auto tid_str = sl::support::to_string_any(tid);
+        server_ptr->get_scheduler().set_thread_stop_hook([]() STATICLIB_NOEXCEPT {
+            auto tid_str = sl::support::to_string_any(std::this_thread::get_id());
             wilton_clean_tls(tid_str.c_str(), static_cast<int>(tid_str.length()));
         });
         server_ptr->start();
