@@ -59,6 +59,8 @@ public:
     
     const std::string& get_request_data();
 
+    const std::map<std::string, std::string>& get_mustache_partials_data();
+
     sl::json::value get_request_form_data();
     
     const std::string& get_request_data_filename();

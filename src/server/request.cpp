@@ -100,6 +100,10 @@ public:
         return request_payload_handler::get_data_string(req);
     }
 
+    const std::map<std::string, std::string>& get_mustache_partials_data(request&) {
+        return mustache_partials;
+    }
+
     sl::json::value get_request_form_data(request&) {
         const std::string& data = request_payload_handler::get_data_string(req);
         auto dict = std::unordered_multimap<std::string, std::string, sl::pion::algorithm::ihash, sl::pion::algorithm::iequal_to>();
@@ -235,6 +239,7 @@ private:
 PIMPL_FORWARD_CONSTRUCTOR(request, (void*)(void*)(partmap_type), (), support::exception)
 PIMPL_FORWARD_METHOD(request, serverconf::request_metadata, get_request_metadata, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, const std::string&, get_request_data, (), (), support::exception)
+PIMPL_FORWARD_METHOD(request, partmap_type, get_mustache_partials_data, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, sl::json::value, get_request_form_data, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, const std::string&, get_request_data_filename, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, void, set_response_metadata, (serverconf::response_metadata), (), support::exception)

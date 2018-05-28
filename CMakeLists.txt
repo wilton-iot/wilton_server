@@ -64,9 +64,6 @@ if ( STATICLIB_TOOLCHAIN MATCHES "windows_.+" )
 endif ( )
 
 add_library ( ${PROJECT_NAME} SHARED
-        # mustache
-        ${CMAKE_CURRENT_LIST_DIR}/src/mustache/wilton_mustache.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/mustache/wiltoncall_mustache.cpp
         # server
         ${CMAKE_CURRENT_LIST_DIR}/src/server/request.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/server/response_writer.cpp
@@ -84,6 +81,7 @@ target_link_libraries ( ${PROJECT_NAME} PRIVATE
         wilton_loader
         wilton_logging
         wilton_zip
+        wilton_mustache
         ${${PROJECT_NAME}_DEPS_PC_LIBRARIES} )
 if ( STATICLIB_TOOLCHAIN MATCHES "(linux|maxosx)_.+" )
     target_link_libraries ( ${PROJECT_NAME} PRIVATE
@@ -96,6 +94,7 @@ target_include_directories ( ${PROJECT_NAME} BEFORE PRIVATE
         ${WILTON_DIR}/core/include
         ${WILTON_DIR}/modules/wilton_loader/include
         ${WILTON_DIR}/modules/wilton_logging/include
+        ${WILTON_DIR}/modules/wilton_mustache/include
         ${${PROJECT_NAME}_DEPS_PC_INCLUDE_DIRS} )
 
 target_compile_options ( ${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_DEPS_PC_CFLAGS_OTHER} )

@@ -32,6 +32,7 @@
 
 #include "wilton/support/alloc.hpp"
 #include "wilton/support/buffer.hpp"
+#include "wilton/wilton_mustache.h"
 
 #include "server/http_path.hpp"
 #include "server/request.hpp"
@@ -313,11 +314,19 @@ char* wilton_Request_send_mustache(
             "Invalid 'values_json_len' parameter specified: [" + sl::support::to_string(values_json_len) + "]"));
     try {
         uint16_t mustache_file_path_len_u16 = static_cast<uint16_t> (mustache_file_path_len);
-        std::string mustache_file_path_str{mustache_file_path, mustache_file_path_len_u16};
         uint32_t values_json_len_u32 = static_cast<uint32_t> (values_json_len);
-        std::string values_json_str{values_json, values_json_len_u32};
-        sl::json::value json = sl::json::loads(values_json_str);
-        request->impl().send_mustache(std::move(mustache_file_path_str), std::move(json));
+
+        std::map<std::string, std::string> part_map = request->impl().get_mustache_partials_data();
+        void* part_map_void_ptr = static_cast<void*> (&part_map);
+
+        char* out = nullptr;
+        int out_len = 0;
+        char* err = wilton_render_mustache_partials(mustache_file_path, mustache_file_path_len_u16,
+        values_json, values_json_len_u32, part_map_void_ptr, std::addressof(out), std::addressof(out_len));
+        if (nullptr != err) return err;
+
+        request->impl().send_response(out, out_len);
+
         return nullptr;
     } catch (const std::exception& e) {
         return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));
