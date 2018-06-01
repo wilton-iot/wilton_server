@@ -27,7 +27,6 @@
 #include <algorithm>
 #include <atomic>
 #include <vector>
-#include <unordered_map>
 #include <unordered_set>
 
 #include "staticlib/config.hpp"
@@ -57,7 +56,6 @@ namespace server {
 namespace { // anonymous
 
 using partmap_type = const std::map<std::string, std::string>&;
-//using mustache_cache_ptr_type = std::map<std::string, std::string>*;
 
 const std::unordered_set<std::string> HEADERS_DISCARD_DUPLICATES{
     "age", "authorization", "content-length", "content-type", "etag", "expires",
