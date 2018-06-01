@@ -79,6 +79,7 @@ void handle_not_found_request(sl::pion::http_request_ptr& req, sl::pion::tcp_con
 
 class server::impl : public sl::pimpl::object::impl {
     std::map<std::string, std::string> mustache_partials;
+    server_mustache_cache mustache_cache;
     std::unique_ptr<sl::pion::http_server> server_ptr;
 
 public:
@@ -99,7 +100,7 @@ public:
                     [ha, this](sl::pion::http_request_ptr& req, sl::pion::tcp_connection_ptr& conn) {
                         auto writer = sl::pion::http_response_writer::create(conn, req);
                         request req_wrap{static_cast<void*> (std::addressof(req)),
-                                static_cast<void*> (std::addressof(writer)), this->mustache_partials};
+                                static_cast<void*> (std::addressof(writer)), this->mustache_partials, &this->mustache_cache};
                         ha(req_wrap);
                         req_wrap.finish();
                     });

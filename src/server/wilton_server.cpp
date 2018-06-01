@@ -29,7 +29,9 @@
 #include "staticlib/config.hpp"
 #include "staticlib/json.hpp"
 #include "staticlib/utils.hpp"
+#include "staticlib/tinydir.hpp"
 
+#include "wilton/support/misc.hpp"
 #include "wilton/support/alloc.hpp"
 #include "wilton/support/buffer.hpp"
 #include "wilton/wilton_mustache.h"
@@ -104,6 +106,27 @@ std::vector<sl::support::observer_ptr<wilton::server::http_path>> wrap_paths(wil
         res.push_back(obs);
     }
     return res;
+}
+
+std::string read_file_to_string_with_cache(const std::string& raw_path, wilton::server::server_mustache_cache* file_cache) {
+    // get pure path without file://
+    std::string path = [&raw_path] () -> std::string {
+        if (sl::utils::starts_with(raw_path, wilton::support::file_proto_prefix)) {
+            return raw_path.substr(wilton::support::file_proto_prefix.length());
+        }
+        return raw_path;
+    } ();
+
+    if (file_cache->count(path)) {
+        return file_cache->get(path);
+    } else {
+        auto fd = sl::tinydir::file_source(path);
+        sl::io::string_sink sink{};
+        sl::io::copy_all(fd, sink);
+        auto res = std::move(sink.get_string());
+        file_cache->set(path, res);
+        return res;
+    }
 }
 
 } // namespace
@@ -319,9 +342,13 @@ char* wilton_Request_send_mustache(
         std::map<std::string, std::string> part_map = request->impl().get_mustache_partials_data();
         void* part_map_void_ptr = static_cast<void*> (&part_map);
 
+        wilton::server::server_mustache_cache* cache = request->impl().get_mustache_cache_ptr();
+        std::string file_path{mustache_file_path, mustache_file_path_len_u16};
+        std::string mustache_template = read_file_to_string_with_cache(file_path, cache);
+
         char* out = nullptr;
         int out_len = 0;
-        char* err = wilton_render_mustache_partials(mustache_file_path, mustache_file_path_len_u16,
+        char* err = wilton_render_mustache_partials(mustache_template.c_str(), mustache_template.length(),
         values_json, values_json_len_u32, part_map_void_ptr, std::addressof(out), std::addressof(out_len));
         if (nullptr != err) return err;
 

@@ -57,6 +57,7 @@ namespace server {
 namespace { // anonymous
 
 using partmap_type = const std::map<std::string, std::string>&;
+//using mustache_cache_ptr_type = std::map<std::string, std::string>*;
 
 const std::unordered_set<std::string> HEADERS_DISCARD_DUPLICATES{
     "age", "authorization", "content-length", "content-type", "etag", "expires",
@@ -76,15 +77,17 @@ class request::impl : public sl::pimpl::object::impl {
     sl::pion::http_request_ptr req;
     sl::pion::http_response_writer_ptr resp;
     const std::map<std::string, std::string>& mustache_partials;
+    server_mustache_cache* mustache_cache;
 
 public:
 
     impl(void* /* sl::pion::http_request_ptr&& */ req, void* /* sl::pion::http_response_writer_ptr&& */ resp,
-            const std::map<std::string, std::string>& mustache_partials) :
+            const std::map<std::string, std::string>& mustache_partials, server_mustache_cache* mustache_cache) :
     state(request_state::created),
     req(std::move(*static_cast<sl::pion::http_request_ptr*>(req))),
     resp(std::move(*static_cast<sl::pion::http_response_writer_ptr*> (resp))),
-    mustache_partials(mustache_partials) { }
+    mustache_partials(mustache_partials),
+    mustache_cache(mustache_cache) { }
 
     serverconf::request_metadata get_request_metadata(request&) {
         std::string http_ver = sl::support::to_string(req->get_version_major()) +
@@ -102,6 +105,10 @@ public:
 
     const std::map<std::string, std::string>& get_mustache_partials_data(request&) {
         return mustache_partials;
+    }
+
+    server_mustache_cache* get_mustache_cache_ptr(request&) {
+        return mustache_cache;
     }
 
     sl::json::value get_request_form_data(request&) {
@@ -236,10 +243,11 @@ private:
     }
 
 };
-PIMPL_FORWARD_CONSTRUCTOR(request, (void*)(void*)(partmap_type), (), support::exception)
+PIMPL_FORWARD_CONSTRUCTOR(request, (void*)(void*)(partmap_type)(server_mustache_cache*), (), support::exception)
 PIMPL_FORWARD_METHOD(request, serverconf::request_metadata, get_request_metadata, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, const std::string&, get_request_data, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, partmap_type, get_mustache_partials_data, (), (), support::exception)
+PIMPL_FORWARD_METHOD(request, server_mustache_cache*, get_mustache_cache_ptr, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, sl::json::value, get_request_form_data, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, const std::string&, get_request_data_filename, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, void, set_response_metadata, (serverconf::response_metadata), (), support::exception)
@@ -248,6 +256,21 @@ PIMPL_FORWARD_METHOD(request, void, send_file, (std::string)(std::function<void(
 PIMPL_FORWARD_METHOD(request, void, send_mustache, (std::string)(sl::json::value), (), support::exception)
 PIMPL_FORWARD_METHOD(request, response_writer, send_later, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, void, finish, (), (), support::exception)
+
+string server_mustache_cache::get(const string &key){
+    std::lock_guard<std::mutex> lock(guardian);
+    return mustache_files_cache[key];
+}
+
+size_t server_mustache_cache::count(const string &key){
+    std::lock_guard<std::mutex> lock(guardian);
+    return mustache_files_cache.count(key);
+}
+
+void server_mustache_cache::set(const string &key, const string &value){
+    std::lock_guard<std::mutex> lock(guardian);
+    mustache_files_cache[key] = value;
+}
 
 } // namespace
 }

@@ -27,7 +27,9 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <unordered_map>
 #include <string>
+#include <mutex>
 
 #include "staticlib/pimpl.hpp"
 #include "staticlib/json.hpp"
@@ -40,6 +42,16 @@
 
 namespace wilton {
 namespace server {
+
+class server_mustache_cache {
+    std::unordered_map<std::string, std::string> mustache_files_cache;
+    std::mutex guardian;
+public:
+    server_mustache_cache(){}
+    size_t count(const std::string& key);
+    std::string get(const std::string& key);
+    void set(const std::string& key, const std::string& value);
+};
 
 class request : public sl::pimpl::object {
 protected:
@@ -61,6 +73,8 @@ public:
 
     const std::map<std::string, std::string>& get_mustache_partials_data();
 
+    server_mustache_cache* get_mustache_cache_ptr();
+
     sl::json::value get_request_form_data();
     
     const std::string& get_request_data_filename();
@@ -81,7 +95,8 @@ public:
     
     request(void* /* sl::pion::http_request_ptr&& */ req, 
             void* /* sl::pion::http_response_writer_ptr&& */ resp,
-            const std::map<std::string, std::string>& mustache_partials);
+            const std::map<std::string, std::string>& mustache_partials,
+            server_mustache_cache* mustache_cache);
 };
 
 } // namespace
