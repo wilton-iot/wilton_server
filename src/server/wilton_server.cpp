@@ -263,8 +263,7 @@ char* wilton_Request_send_response(wilton_Request* request, const char* data,
     if (!sl::support::is_uint32(data_len)) return wilton::support::alloc_copy(TRACEMSG(
             "Invalid 'data_len' parameter specified: [" + sl::support::to_string(data_len) + "]"));
     try {
-        uint32_t data_len_u32 = static_cast<uint32_t> (data_len);
-        request->impl().send_response(data, data_len_u32);
+        request->impl().send_response({data, data_len});
         return nullptr;
     } catch (const std::exception& e) {
         return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));
@@ -368,8 +367,7 @@ char* wilton_ResponseWriter_send(
     if (!sl::support::is_uint32(data_len)) return wilton::support::alloc_copy(TRACEMSG(
             "Invalid 'data_len' parameter specified: [" + sl::support::to_string(data_len) + "]"));
     try {
-        uint32_t data_len_u32 = static_cast<uint32_t> (data_len);
-        writer->impl().send(data, data_len_u32);
+        writer->impl().send({data, data_len});
         delete writer;
         return nullptr;
     } catch (const std::exception& e) {

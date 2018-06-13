@@ -65,31 +65,36 @@ public:
     
     // todo: error messages format
     // todo: path checks
-    void operator()(sl::pion::http_request_ptr& req, sl::pion::tcp_connection_ptr& conn) {
-        auto resp = sl::pion::http_response_writer::create(conn, req);
+    void operator()(sl::pion::http_request_ptr req, sl::pion::response_writer_ptr resp) {
         std::string url_path = std::string{req->get_resource(), conf->resource.length()};
         if (url_path.find("..") != std::string::npos) {
             resp->get_response().set_status_code(sl::pion::http_request::RESPONSE_CODE_BAD_REQUEST);
             resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_BAD_REQUEST);
-            resp << sl::pion::http_request::RESPONSE_CODE_BAD_REQUEST << " "
-                    << sl::pion::http_request::RESPONSE_MESSAGE_BAD_REQUEST << ":"
-                    << " [" << url_path << "]\n";
-            resp->send();
+            resp->write(sl::support::to_string(sl::pion::http_request::RESPONSE_CODE_BAD_REQUEST));
+            resp->write_nocopy(" ");
+            resp->write_nocopy(sl::pion::http_request::RESPONSE_MESSAGE_BAD_REQUEST);
+            resp->write_nocopy(": [");
+            resp->write(url_path);
+            resp->write_nocopy("]\n");
+            resp->send(std::move(resp));
         } else {
-            try {
-                std::string file_path = std::string(conf->dirPath) +"/" + url_path;
-                auto fd = sl::tinydir::file_source(file_path);
-                auto fd_ptr = std::unique_ptr<std::streambuf>(sl::io::make_unbuffered_istreambuf_ptr(std::move(fd)));
-                auto sender = std::make_shared<response_stream_sender>(resp, std::move(fd_ptr));
+            std::string file_path = std::string(conf->dirPath) +"/" + url_path;
+            auto fd_opt = open_file_source(file_path);
+            if (fd_opt.has_value()) {
+                auto fd_ptr = sl::io::make_source_istream_ptr(std::move(fd_opt.value()));
                 set_resp_headers(url_path, resp->get_response());
-                sender->send();
-            } catch (const std::exception&) {
+                auto sender = sl::support::make_unique<response_stream_sender>(std::move(resp), std::move(fd_ptr));
+                sender->send(std::move(sender));
+            } else {
                 resp->get_response().set_status_code(sl::pion::http_request::RESPONSE_CODE_NOT_FOUND);
                 resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND);
-                resp << sl::pion::http_request::RESPONSE_CODE_NOT_FOUND << " "
-                        << sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND << ":"
-                        << " [" << url_path << "]\n";
-                resp->send();
+                resp->write(sl::support::to_string(sl::pion::http_request::RESPONSE_CODE_NOT_FOUND));
+                resp->write_nocopy(" ");
+                resp->write_nocopy(sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND);
+                resp->write_nocopy(": [");
+                resp->write(url_path);
+                resp->write_nocopy("]\n");
+                resp->send(std::move(resp));
             }
         }
     }
@@ -107,7 +112,15 @@ private:
         // set caching
         resp.change_header("Cache-Control", "max-age=" + sl::support::to_string(conf->cacheMaxAgeSeconds) + ", public");
     }
-    
+
+    // todo: fixme
+    static sl::support::optional<sl::tinydir::file_source> open_file_source(const std::string& file_path) {
+        try {
+            return sl::support::make_optional(sl::tinydir::file_source(file_path));
+        } catch(const sl::tinydir::tinydir_exception&){
+            return sl::support::optional<sl::tinydir::file_source>();
+        }
+    }
 };
 
 } // namespace

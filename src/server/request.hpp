@@ -30,6 +30,7 @@
 #include <string>
 
 #include "staticlib/pimpl.hpp"
+#include "staticlib/io.hpp"
 #include "staticlib/json.hpp"
 
 #include "wilton/support/exception.hpp"
@@ -65,7 +66,7 @@ public:
     
     void set_response_metadata(serverconf::response_metadata rm);
     
-    void send_response(const char* data, uint32_t data_len);
+    void send_response(sl::io::span<const char> data);
     
     void send_file(std::string file_path, std::function<void(bool)> finalizer);
     

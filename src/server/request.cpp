@@ -74,16 +74,16 @@ class request::impl : public sl::pimpl::object::impl {
     std::atomic<request_state> state;
     // owning ptrs here to not restrict clients async ops
     sl::pion::http_request_ptr req;
-    sl::pion::http_response_writer_ptr resp;
+    sl::pion::response_writer_ptr resp;
     const std::map<std::string, std::string>& mustache_partials;
 
 public:
 
-    impl(void* /* sl::pion::http_request_ptr&& */ req, void* /* sl::pion::http_response_writer_ptr&& */ resp,
+    impl(void* /* sl::pion::http_request_ptr&& */ req, void* /* sl::pion::response_writer_ptr&& */ resp,
             const std::map<std::string, std::string>& mustache_partials) :
     state(request_state::created),
     req(std::move(*static_cast<sl::pion::http_request_ptr*>(req))),
-    resp(std::move(*static_cast<sl::pion::http_response_writer_ptr*> (resp))),
+    resp(std::move(*static_cast<sl::pion::response_writer_ptr*> (resp))),
     mustache_partials(mustache_partials) { }
 
     serverconf::request_metadata get_request_metadata(request&) {
@@ -125,13 +125,13 @@ public:
         }
     }
 
-    void send_response(request&, const char* data, uint32_t data_len) {
+    void send_response(request&, sl::io::span<const char> data) {
         auto state_expected = request_state::created;
         if (!state.compare_exchange_strong(state_expected, request_state::committed,
                 std::memory_order_acq_rel, std::memory_order_relaxed)) throw support::exception(TRACEMSG(
                 "Invalid request lifecycle operation, request is already committed"));
-        resp->write(data, data_len);
-        resp->send();
+        resp->write(data);
+        resp->send(std::move(resp));
     }
 
     void send_file(request&, std::string file_path, std::function<void(bool)> finalizer) {
@@ -140,9 +140,9 @@ public:
         if (!state.compare_exchange_strong(state_expected, request_state::committed,
                 std::memory_order_acq_rel, std::memory_order_relaxed)) throw support::exception(TRACEMSG(
                 "Invalid request lifecycle operation, request is already committed"));
-        auto fd_ptr = std::unique_ptr<std::streambuf>(sl::io::make_unbuffered_istreambuf_ptr(std::move(fd)));
-        auto sender = std::make_shared<response_stream_sender>(resp, std::move(fd_ptr), std::move(finalizer));
-        sender->send();
+        auto fd_ptr = sl::io::make_source_istream_ptr(std::move(fd));
+        auto sender = sl::support::make_unique<response_stream_sender>(std::move(resp), std::move(fd_ptr), std::move(finalizer));
+        sender->send(std::move(sender));
     }
 
     void send_mustache(request&, std::string mustache_file_path, sl::json::value json) {
@@ -157,9 +157,9 @@ public:
             return mustache_file_path;
         } ();
         auto mp = sl::mustache::source(mpath, std::move(json), mustache_partials);
-        auto mp_ptr = std::unique_ptr<std::streambuf>(sl::io::make_unbuffered_istreambuf_ptr(std::move(mp)));
-        auto sender = std::make_shared<response_stream_sender>(resp, std::move(mp_ptr));
-        sender->send();
+        auto mp_ptr = sl::io::make_source_istream_ptr(std::move(mp));
+        auto sender = sl::support::make_unique<response_stream_sender>(std::move(resp), std::move(mp_ptr));
+        sender->send(std::move(sender));
     }
     
     response_writer send_later(request&) {
@@ -167,7 +167,7 @@ public:
         if (!state.compare_exchange_strong(state_expected, request_state::committed,
                 std::memory_order_acq_rel, std::memory_order_relaxed)) throw support::exception(TRACEMSG(
                 "Invalid request lifecycle operation, request is already committed"));
-        sl::pion::http_response_writer_ptr writer = this->resp;
+        sl::pion::response_writer_ptr writer = std::move(this->resp);
         return response_writer{static_cast<void*>(std::addressof(writer))};
     }
 
@@ -175,7 +175,7 @@ public:
         auto state_expected = request_state::created;
         if (state.compare_exchange_strong(state_expected, request_state::committed,
                 std::memory_order_acq_rel, std::memory_order_relaxed)) {
-            resp->send();
+            resp->send(std::move(resp));
         }
     }
 
@@ -238,7 +238,7 @@ PIMPL_FORWARD_METHOD(request, const std::string&, get_request_data, (), (), supp
 PIMPL_FORWARD_METHOD(request, sl::json::value, get_request_form_data, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, const std::string&, get_request_data_filename, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, void, set_response_metadata, (serverconf::response_metadata), (), support::exception)
-PIMPL_FORWARD_METHOD(request, void, send_response, (const char*)(uint32_t), (), support::exception)
+PIMPL_FORWARD_METHOD(request, void, send_response, (sl::io::span<const char>), (), support::exception)
 PIMPL_FORWARD_METHOD(request, void, send_file, (std::string)(std::function<void(bool)>), (), support::exception)
 PIMPL_FORWARD_METHOD(request, void, send_mustache, (std::string)(sl::json::value), (), support::exception)
 PIMPL_FORWARD_METHOD(request, response_writer, send_later, (), (), support::exception)

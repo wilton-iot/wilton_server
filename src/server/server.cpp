@@ -63,16 +63,15 @@ const std::string not_found_msg_start = R"({
 const std::string not_found_msg_finish = R"(] was not found on this server."
 })";
 
-void handle_not_found_request(sl::pion::http_request_ptr& req, sl::pion::tcp_connection_ptr& conn) {
-    auto writer = sl::pion::http_response_writer::create(conn, req);
-    writer->get_response().set_status_code(404);
-    writer->get_response().set_status_message("Not Found");
-    writer->write_no_copy(not_found_msg_start);
+void handle_not_found_request(sl::pion::http_request_ptr req, sl::pion::response_writer_ptr resp) {
+    resp->get_response().set_status_code(404);
+    resp->get_response().set_status_message("Not Found");
+    resp->write_nocopy(not_found_msg_start);
     auto res = req->get_resource();
     std::replace(res.begin(), res.end(), '"', '\'');
-    writer->write_move(std::move(res));
-    writer->write_no_copy(not_found_msg_finish);
-    writer->send();
+    resp->write(res);
+    resp->write_nocopy(not_found_msg_finish);
+    resp->send(std::move(resp));
 }
 
 } // namespace
@@ -88,6 +87,7 @@ public:
             conf.numberOfThreads, 
             conf.tcpPort,
             asio::ip::address_v4::from_string(conf.ipAddress),
+            conf.readTimeoutMillis,
             conf.ssl.keyFile,
             create_pwd_cb(conf.ssl.keyPassword),
             conf.ssl.verifyFile,
@@ -96,10 +96,9 @@ public:
         for (auto& pa : paths) {
             auto ha = pa->handler; // copy
             server_ptr->add_handler(pa->method, pa->path,
-                    [ha, this](sl::pion::http_request_ptr& req, sl::pion::tcp_connection_ptr& conn) {
-                        auto writer = sl::pion::http_response_writer::create(conn, req);
+                    [ha, this](sl::pion::http_request_ptr req, sl::pion::response_writer_ptr resp) {
                         request req_wrap{static_cast<void*> (std::addressof(req)),
-                                static_cast<void*> (std::addressof(writer)), this->mustache_partials};
+                                static_cast<void*> (std::addressof(resp)), this->mustache_partials};
                         ha(req_wrap);
                         req_wrap.finish();
                     });
@@ -110,18 +109,17 @@ public:
         if (!conf.root_redirect_location.empty()) {
             std::string location = conf.root_redirect_location;
             server_ptr->add_handler("GET", "/", 
-                    [location](sl::pion::http_request_ptr& req, sl::pion::tcp_connection_ptr& conn) {
-                if("/" == req->get_resource()) {
-                    auto writer = sl::pion::http_response_writer::create(conn, req);
-                    auto& resp = writer->get_response();
-                    resp.set_status_code(303);
-                    resp.set_status_message("See Other");
-                    resp.change_header("Location", location);
-                    writer->send();
-                } else {
-                    handle_not_found_request(req, conn);
-                }
-            });
+                    [location](sl::pion::http_request_ptr req, sl::pion::response_writer_ptr resp) {
+                        if("/" == req->get_resource()) {
+                            auto& rp = resp->get_response();
+                            rp.set_status_code(303);
+                            rp.set_status_message("See Other");
+                            rp.change_header("Location", location);
+                            resp->send(std::move(resp));
+                        } else {
+                            handle_not_found_request(std::move(req), std::move(resp));
+                        }
+                    });
         }
         for (const auto& dr : conf.documentRoots) {
             if (dr.dirPath.length() > 0) {

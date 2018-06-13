@@ -59,26 +59,27 @@ public:
     
     zip_handler(const serverconf::document_root& conf) :
     conf(std::make_shared<serverconf::document_root>(conf.clone())),
-    idx(std::make_shared<sl::unzip::file_index>(conf.zipPath)) { }    
+    idx(std::make_shared<sl::unzip::file_index>(conf.zipPath)) { }
     
     // todo: error messages format
     // todo: path checks
-    void operator()(sl::pion::http_request_ptr& req, sl::pion::tcp_connection_ptr& conn) {
-        auto resp = sl::pion::http_response_writer::create(conn, req);
+    void operator()(sl::pion::http_request_ptr req, sl::pion::response_writer_ptr resp) {
         std::string url_path = conf->zipInnerPrefix + std::string{req->get_resource(), conf->resource.length()};
-        sl::unzip::file_entry en = idx->find_zip_entry(url_path);        
+        sl::unzip::file_entry en = idx->find_zip_entry(url_path);
         if (!en.is_empty()) {
             auto stream_ptr = sl::unzip::open_zip_entry(*idx, url_path);
-            auto sender = std::make_shared<response_stream_sender>(resp, std::move(stream_ptr));
             set_resp_headers(url_path, resp->get_response());
-            sender->send();
+            auto sender = sl::support::make_unique<response_stream_sender>(std::move(resp), std::move(stream_ptr));
+            sender->send(std::move(sender));
         } else {
             resp->get_response().set_status_code(sl::pion::http_request::RESPONSE_CODE_NOT_FOUND);
             resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND);
-            resp << sl::pion::http_request::RESPONSE_CODE_NOT_FOUND << " "
-                    << sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND << ":"
-                    << " [" << url_path << "]\n";
-            resp->send();
+            resp->write(sl::support::to_string(sl::pion::http_request::RESPONSE_CODE_NOT_FOUND));
+            resp->write_nocopy(" ");
+            resp->write_nocopy(": [");
+            resp->write(url_path);
+            resp->write_nocopy("]\n");
+            resp->send(std::move(resp));
         }
     }
 

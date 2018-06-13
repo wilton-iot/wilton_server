@@ -46,6 +46,7 @@ public:
     uint32_t numberOfThreads = 2;
     uint16_t tcpPort = 8080;
     std::string ipAddress = "0.0.0.0";
+    uint32_t readTimeoutMillis = 10000;
     ssl_config ssl;
     std::vector<document_root> documentRoots;
     request_payload_config requestPayload;
@@ -60,6 +61,7 @@ public:
     numberOfThreads(other.numberOfThreads),
     tcpPort(other.tcpPort),
     ipAddress(std::move(other.ipAddress)),
+    readTimeoutMillis(other.readTimeoutMillis),
     ssl(std::move(other.ssl)),
     documentRoots(std::move(other.documentRoots)),
     requestPayload(std::move(other.requestPayload)),
@@ -70,6 +72,7 @@ public:
         this->numberOfThreads = other.numberOfThreads;
         this->tcpPort = other.tcpPort;
         this->ipAddress = std::move(other.ipAddress);
+        this->readTimeoutMillis = other.readTimeoutMillis;
         this->ssl = std::move(other.ssl);
         this->documentRoots = std::move(other.documentRoots);
         this->requestPayload = std::move(other.requestPayload);
@@ -82,11 +85,13 @@ public:
         for (const sl::json::field& fi : json.as_object()) {
             auto& name = fi.name();
             if ("numberOfThreads" == name) {
-                this->numberOfThreads = fi.as_uint16_or_throw(name);
+                this->numberOfThreads = fi.as_uint16_positive_or_throw(name);
             } else if ("tcpPort" == name) {
-                this->tcpPort = fi.as_uint16_or_throw(name);
+                this->tcpPort = fi.as_uint16_positive_or_throw(name);
             } else if ("ipAddress" == name) {
                 this->ipAddress = fi.as_string_nonempty_or_throw(name);
+            } else if ("readTimeoutMillis" == name) {
+                this->readTimeoutMillis = fi.as_uint32_positive_or_throw(name);
             } else if ("ssl" == name) {
                 this->ssl = ssl_config(fi.val());
             } else if ("documentRoots" == name) {
@@ -111,6 +116,7 @@ public:
             {"numberOfThreads", numberOfThreads},
             {"tcpPort", tcpPort},
             {"ipAddress", ipAddress},
+            {"readTimeoutMillis", readTimeoutMillis},
             {"ssl", ssl.to_json()},
             {"documentRoots", [this]() {
                 auto drs = sl::ranges::transform(documentRoots, [](const serverconf::document_root& el) {

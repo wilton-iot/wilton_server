@@ -26,6 +26,7 @@
 
 #include <cstdint>
 
+#include "staticlib/io.hpp"
 #include "staticlib/pimpl.hpp"
 
 #include "wilton/support/exception.hpp"
@@ -51,7 +52,7 @@ public:
 
     void set_metadata(serverconf::response_metadata rm);
     
-    void send(const char* data, uint32_t data_len);
+    void send(sl::io::span<const char> data);
   
     // private api
     response_writer(void* /* sl::pion::http_response_writer_ptr&& */ writer);
