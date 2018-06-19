@@ -300,6 +300,52 @@ support::buffer server_stop(sl::io::span<const char> data) {
     return support::make_null_buffer();
 }
 
+support::buffer server_broadcast_websocket(sl::io::span<const char> data) {
+    // json parse
+    auto json = sl::json::load(data);
+    int64_t handle = -1;
+    auto rpath = std::ref(sl::utils::empty_string());
+    auto rmessage = std::ref(sl::utils::empty_string());
+    auto ids_list = std::string("[]");
+    for (const sl::json::field& fi : json.as_object()) {
+        auto& name = fi.name();
+        if ("serverHandle" == name) {
+            handle = fi.as_int64_or_throw(name);
+        } else if ("path" == name) {
+            rpath = fi.as_string_nonempty_or_throw(name);
+        } else if("message" == name) {
+            rmessage = fi.as_string_nonempty_or_throw(name);
+        } else if("idList" == name) {
+            ids_list = fi.val().dumps();
+        } else {
+            throw support::exception(TRACEMSG("Unknown data field: [" + name + "]"));
+        }
+    }
+    if (-1 == handle) throw support::exception(TRACEMSG(
+            "Required parameter 'serverHandle' not specified"));
+    if (rpath.get().empty()) throw support::exception(TRACEMSG(
+            "Required parameter 'path' not specified"));
+    const std::string& path = rpath.get();
+    if (rmessage.get().empty()) throw support::exception(TRACEMSG(
+            "Required parameter 'message' not specified"));
+    const std::string& message = rmessage.get();
+    // get handle
+    auto sreg = shared_server_registry();
+    auto pa = sreg->remove(handle);
+    if (nullptr == pa.first) throw support::exception(TRACEMSG(
+            "Invalid 'serverHandle' parameter specified"));
+    // call wilton
+    char* err = wilton_Server_broadcast_websocket(pa.first,
+            path.c_str(), static_cast<int>(path.length()),
+            message.c_str(), static_cast<int>(message.length()),
+            ids_list.c_str(), static_cast<int>(ids_list.length()));
+    sreg->put(pa.first, std::move(pa.second));
+    if (nullptr != err) {
+        support::throw_wilton_error(err, TRACEMSG(err));
+    }
+    return support::make_null_buffer();
+}
+
 support::buffer request_get_metadata(sl::io::span<const char> data) {
     // json parse
     auto json = sl::json::load(data);
@@ -584,6 +630,32 @@ support::buffer request_send_later(sl::io::span<const char> data) {
     return support::make_json_buffer({
         { "responseWriterHandle", rwhandle}
     });
+}
+
+support::buffer request_close_websocket(sl::io::span<const char> data) {
+    // json parse
+    auto json = sl::json::load(data);
+    int64_t handle = -1;
+    for (const sl::json::field& fi : json.as_object()) {
+        auto& name = fi.name();
+        if ("requestHandle" == name) {
+            handle = fi.as_int64_or_throw(name);
+        } else {
+            throw support::exception(TRACEMSG("Unknown data field: [" + name + "]"));
+        }
+    }
+    if (-1 == handle) throw support::exception(TRACEMSG(
+            "Required parameter 'requestHandle' not specified"));
+    // get handle
+    auto rreg = shared_request_registry();
+    wilton_Request* request = rreg->remove(handle);
+    if (nullptr == request) throw support::exception(TRACEMSG(
+            "Invalid 'requestHandle' parameter specified"));
+    // call wilton
+    char* err = wilton_Request_close_websocket(request);
+    rreg->put(request);
+    if (nullptr != err) support::throw_wilton_error(err, TRACEMSG(err));
+    return support::make_null_buffer();
 }
 
 support::buffer request_set_metadata_with_response_writer(sl::io::span<const char> data) {

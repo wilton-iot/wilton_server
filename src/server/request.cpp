@@ -66,16 +66,23 @@ const std::unordered_set<std::string> HEADERS_DISCARD_DUPLICATES{
 
 } //namespace
 
+// note: supports both HTTP and WebSocker to minimize client changes
 class request::impl : public sl::pimpl::object::impl {
 
     enum class request_state {
         created, committed
     };
     std::atomic<request_state> state;
+
+    // http state
     // owning ptrs here to not restrict clients async ops
     sl::pion::http_request_ptr req;
     sl::pion::response_writer_ptr resp;
-    const std::map<std::string, std::string>& mustache_partials;
+    sl::support::observer_ptr<const std::map<std::string, std::string>> mustache_partials;
+
+    // ws state
+    sl::pion::websocket_ptr ws;
+    bool websocket = false;
 
 public:
 
@@ -86,21 +93,38 @@ public:
     resp(std::move(*static_cast<sl::pion::response_writer_ptr*> (resp))),
     mustache_partials(mustache_partials) { }
 
+    impl(void* /* sl::pion::websocket_ptr&& */ wsocket, bool response_allowed) :
+    state(response_allowed ? request_state::created : request_state::committed),
+    ws(std::move(*static_cast<sl::pion::websocket_ptr*>(wsocket))),
+    websocket(true) { }
+
     serverconf::request_metadata get_request_metadata(request&) {
-        std::string http_ver = sl::support::to_string(req->get_version_major()) +
-                "." + sl::support::to_string(req->get_version_minor());
-        auto headers = get_request_headers(*req);
-        auto queries = get_queries(*req);
-        std::string protocol = resp->get_connection()->get_ssl_flag() ? "https" : "http";
-        return serverconf::request_metadata(http_ver, protocol, req->get_method(), req->get_resource(),
-                req->get_query_string(), std::move(queries), std::move(headers));
+        auto& rq = get_request();
+        std::string http_ver = sl::support::to_string(rq.get_version_major()) +
+                "." + sl::support::to_string(rq.get_version_minor());
+        auto headers = get_request_headers(rq);
+        auto queries = get_queries(rq);
+        std::string protocol = get_conn().get_ssl_flag() ? "https" : "http";
+        return serverconf::request_metadata(http_ver, protocol, rq.get_method(), rq.get_resource(),
+                rq.get_query_string(), std::move(queries), std::move(headers));
     }
 
     const std::string& get_request_data(request&) {
+        if (websocket) throw support::exception(TRACEMSG(
+                "Cached data not supported with WebSocket"));
         return request_payload_handler::get_data_string(req);
     }
 
+    support::buffer get_request_data_buffer(request&) {
+        if (!websocket) throw support::exception(TRACEMSG(
+                "Buffer data not supported with HTTP"));
+        auto src = ws->message_data();
+        return support::make_source_buffer(src);
+    }
+
     sl::json::value get_request_form_data(request&) {
+        if (websocket) throw support::exception(TRACEMSG(
+                "Form data not supported with WebSocket"));
         const std::string& data = request_payload_handler::get_data_string(req);
         auto dict = std::unordered_multimap<std::string, std::string, sl::pion::algorithm::ihash, sl::pion::algorithm::iequal_to>();
         auto err = sl::pion::http_parser::parse_url_encoded(dict, data);
@@ -114,10 +138,14 @@ public:
     }
 
     const std::string& get_request_data_filename(request&) {
+        if (websocket) throw support::exception(TRACEMSG(
+                "Persistent request data not supported with WebSocket"));
         return request_payload_handler::get_data_filename(req);
     }
 
     void set_response_metadata(request&, serverconf::response_metadata rm) {
+        if (websocket) throw support::exception(TRACEMSG(
+                "Response metadata not supported with WebSocket"));
         resp->get_response().set_status_code(rm.statusCode);
         resp->get_response().set_status_message(rm.statusMessage);
         for (const serverconf::header& ha : rm.headers) {
@@ -130,11 +158,18 @@ public:
         if (!state.compare_exchange_strong(state_expected, request_state::committed,
                 std::memory_order_acq_rel, std::memory_order_relaxed)) throw support::exception(TRACEMSG(
                 "Invalid request lifecycle operation, request is already committed"));
-        resp->write(data);
-        resp->send(std::move(resp));
+        if (!websocket) {
+            resp->write(data);
+            resp->send(std::move(resp));
+        } else {
+            ws->write(data);
+            ws->send(std::move(ws));
+        }
     }
 
     void send_file(request&, std::string file_path, std::function<void(bool)> finalizer) {
+        if (websocket) throw support::exception(TRACEMSG(
+                "Files sending not supported with WebSocket"));
         auto fd = sl::tinydir::file_source(file_path);
         auto state_expected = request_state::created;
         if (!state.compare_exchange_strong(state_expected, request_state::committed,
@@ -146,6 +181,8 @@ public:
     }
 
     void send_mustache(request&, std::string mustache_file_path, sl::json::value json) {
+        if (websocket) throw support::exception(TRACEMSG(
+                "Mustache not supported with WebSocket"));
         auto state_expected = request_state::created;
         if (!state.compare_exchange_strong(state_expected, request_state::committed,
                 std::memory_order_acq_rel, std::memory_order_relaxed)) throw support::exception(TRACEMSG(
@@ -156,13 +193,15 @@ public:
             }
             return mustache_file_path;
         } ();
-        auto mp = sl::mustache::source(mpath, std::move(json), mustache_partials);
+        auto mp = sl::mustache::source(mpath, std::move(json), *mustache_partials);
         auto mp_ptr = sl::io::make_source_istream_ptr(std::move(mp));
         auto sender = sl::support::make_unique<response_stream_sender>(std::move(resp), std::move(mp_ptr));
         sender->send(std::move(sender));
     }
     
     response_writer send_later(request&) {
+        if (websocket) throw support::exception(TRACEMSG(
+                "Delayed responses not supported with WebSocket"));
         auto state_expected = request_state::created;
         if (!state.compare_exchange_strong(state_expected, request_state::committed,
                 std::memory_order_acq_rel, std::memory_order_relaxed)) throw support::exception(TRACEMSG(
@@ -175,18 +214,53 @@ public:
         auto state_expected = request_state::created;
         if (state.compare_exchange_strong(state_expected, request_state::committed,
                 std::memory_order_acq_rel, std::memory_order_relaxed)) {
-            resp->send(std::move(resp));
+            if (!websocket) {
+                resp->send(std::move(resp));
+            } else {
+                ws->receive(std::move(ws));
+            }
         }
     }
 
+    bool is_websocket(request&) {
+        return websocket;
+    }
+
+    void close_websocket(request&) {
+        if (!websocket) throw support::exception(TRACEMSG(
+                "Close connection operation not supported with HTTP"));
+        auto state_expected = request_state::created;
+        if (!state.compare_exchange_strong(state_expected, request_state::committed,
+                std::memory_order_acq_rel, std::memory_order_relaxed)) throw support::exception(TRACEMSG(
+                "Invalid request lifecycle operation, request is already committed"));
+        ws->close(std::move(ws));
+    }
+
 private:
+
+    sl::pion::http_request& get_request() {
+        if (!websocket) {
+            return *req;
+        } else {
+            return ws->get_request();
+        }
+    }
+
+    sl::pion::tcp_connection& get_conn() {
+        if (!websocket) {
+            return *resp->get_connection();
+        } else {
+            return ws->get_connection();
+        }
+    }
+
     // todo: cookies
     // Duplicates in raw headers are handled in the following ways, depending on the header name:
     // Duplicates of age, authorization, content-length, content-type, etag, expires, 
     // from, host, if-modified-since, if-unmodified-since, last-modified, location, 
     // max-forwards, proxy-authorization, referer, retry-after, or user-agent are discarded.
     // For all other headers, the values are joined together with ', '.
-    std::vector<serverconf::header> get_request_headers(sl::pion::http_request& req) {
+    static std::vector<serverconf::header> get_request_headers(sl::pion::http_request& req) {
         std::unordered_map<std::string, serverconf::header> map{};
         for (const auto& en : req.get_headers()) {
             auto ha = serverconf::header(en.first, en.second);
@@ -207,7 +281,7 @@ private:
         return res;
     }
     
-    std::vector<std::pair<std::string, std::string>> get_queries(sl::pion::http_request& req) {
+    static std::vector<std::pair<std::string, std::string>> get_queries(sl::pion::http_request& req) {
         std::unordered_map<std::string, std::string> map{};
         for (const auto& en : req.get_queries()) {
             auto inserted = map.emplace(en.first, en.second);
@@ -222,7 +296,7 @@ private:
         return res;
     }
 
-    void append_with_comma(std::string& str, const std::string& tail) {
+    static void append_with_comma(std::string& str, const std::string& tail) {
         if (str.empty()) {
             str = tail;
         } else if (!tail.empty()) {
@@ -233,8 +307,10 @@ private:
 
 };
 PIMPL_FORWARD_CONSTRUCTOR(request, (void*)(void*)(partmap_type), (), support::exception)
+PIMPL_FORWARD_CONSTRUCTOR(request, (void*)(bool), (), support::exception)
 PIMPL_FORWARD_METHOD(request, serverconf::request_metadata, get_request_metadata, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, const std::string&, get_request_data, (), (), support::exception)
+PIMPL_FORWARD_METHOD(request, support::buffer, get_request_data_buffer, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, sl::json::value, get_request_form_data, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, const std::string&, get_request_data_filename, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, void, set_response_metadata, (serverconf::response_metadata), (), support::exception)
@@ -243,6 +319,8 @@ PIMPL_FORWARD_METHOD(request, void, send_file, (std::string)(std::function<void(
 PIMPL_FORWARD_METHOD(request, void, send_mustache, (std::string)(sl::json::value), (), support::exception)
 PIMPL_FORWARD_METHOD(request, response_writer, send_later, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, void, finish, (), (), support::exception)
+PIMPL_FORWARD_METHOD(request, bool, is_websocket, (), (), support::exception)
+PIMPL_FORWARD_METHOD(request, void, close_websocket, (), (), support::exception)
 
 } // namespace
 }

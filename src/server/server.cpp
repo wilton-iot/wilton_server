@@ -95,16 +95,26 @@ public:
         auto conf_ptr = std::make_shared<serverconf::request_payload_config>(conf.requestPayload.clone());
         for (auto& pa : paths) {
             auto ha = pa->handler; // copy
-            server_ptr->add_handler(pa->method, pa->path,
-                    [ha, this](sl::pion::http_request_ptr req, sl::pion::response_writer_ptr resp) {
-                        request req_wrap{static_cast<void*> (std::addressof(req)),
-                                static_cast<void*> (std::addressof(resp)), this->mustache_partials};
-                        ha(req_wrap);
-                        req_wrap.finish();
-                    });
-            server_ptr->add_payload_handler(pa->method, pa->path, [conf_ptr](sl::pion::http_request_ptr& /* request */) {
-                return request_payload_handler{*conf_ptr};
-            });
+            if (sl::utils::starts_with(pa->method, "WS")) {
+                bool response_allowed = "WSCLOSE" != pa->method;
+                server_ptr->add_websocket_handler(pa->method, pa->path,
+                        [ha, this, response_allowed](sl::pion::websocket_ptr ws) {
+                            request req_ws{static_cast<void*> (std::addressof(ws)), response_allowed};
+                            ha(req_ws);
+                            req_ws.finish();
+                        });
+            } else {
+                server_ptr->add_handler(pa->method, pa->path,
+                        [ha, this](sl::pion::http_request_ptr req, sl::pion::response_writer_ptr resp) {
+                            request req_wrap{static_cast<void*> (std::addressof(req)),
+                                    static_cast<void*> (std::addressof(resp)), this->mustache_partials};
+                            ha(req_wrap);
+                            req_wrap.finish();
+                        });
+                server_ptr->add_payload_handler(pa->method, pa->path, [conf_ptr](sl::pion::http_request_ptr& /* request */) {
+                    return request_payload_handler(*conf_ptr);
+                });
+            }
         }
         if (!conf.root_redirect_location.empty()) {
             std::string location = conf.root_redirect_location;
@@ -141,7 +151,12 @@ public:
     void stop(server&) {
         server_ptr->stop();
     }
-    
+
+    void broadcast_websocket(server&, const std::string& path, sl::io::span<const char> message,
+            const std::set<std::string>& dest_ids) {
+        server_ptr->broadcast_websocket(path, message, sl::websocket::frame_type::text, dest_ids);
+    }
+
 private:
     static std::function<std::string(std::size_t, asio::ssl::context::password_purpose)> create_pwd_cb(const std::string& password) {
         return [password](std::size_t, asio::ssl::context::password_purpose) {
@@ -227,6 +242,8 @@ private:
 };
 PIMPL_FORWARD_CONSTRUCTOR(server, (serverconf::server_config)(std::vector<sl::support::observer_ptr<http_path>>), (), support::exception)
 PIMPL_FORWARD_METHOD(server, void, stop, (), (), support::exception)
+PIMPL_FORWARD_METHOD(server, void, broadcast_websocket, (const std::string&)
+        (sl::io::span<const char>)(const std::set<std::string>&), (), support::exception)
 
 } // namespace
 }

@@ -60,40 +60,40 @@ class request_payload_handler {
         payload_state state = payload_state::memory;
         std::unique_ptr<sl::utils::random_string_generator> rng;
 
-    public:        
+    public:
         payload_data(const serverconf::request_payload_config& conf) :
         conf(conf.clone()) { }
-      
+
         sl::utils::random_string_generator& randomgen() {
             if (nullptr == rng.get()) {
                 rng.reset(new sl::utils::random_string_generator());
             }
             return *rng;
         }
-        
+
         payload_data(const payload_data&) = delete;
         payload_data& operator=(const payload_data&) = delete;
     };
-    
+
     std::shared_ptr<payload_data> data;
 
 public:
     request_payload_handler(const request_payload_handler& other) :
     data(other.data) { }
-    
+
     request_payload_handler& operator=(const request_payload_handler& other) {
         data = other.data;
         return *this;
     }
-    
-    request_payload_handler(request_payload_handler&& other) :    
+
+    request_payload_handler(request_payload_handler&& other) :
     data(std::move(other.data)) { }
-    
+
     request_payload_handler& operator=(request_payload_handler&& other) {
         data = std::move(other.data);
         return *this;
     }
-    
+
     ~request_payload_handler() STATICLIB_NOEXCEPT {
         try {
             if (nullptr != data.get() && !data->filename.empty()) {
@@ -119,7 +119,7 @@ public:
         if (!ph) throw support::exception(TRACEMSG("System error in payload handler access"));
         return ph->get_data_as_filename();
     }
-    
+
     void operator()(const char* s, size_t n) {
         switch (data->state) {
         case payload_state::memory:
@@ -149,11 +149,11 @@ public:
         }
     }
 
-private:        
-    payload_data& get_data() {        
+private:
+    payload_data& get_data() {
         return *data;
     }
-    
+
     std::string gen_filename() {
         return data->conf.tmpDirPath + "/" + sl::support::to_string(data->counter++) + "_" +
                 data->randomgen().generate(data->conf.tmpFilenameLength);
@@ -162,7 +162,7 @@ private:
     void close_file_writer() {
         data->file.reset(nullptr);
     }
-    
+
     const std::string& get_data_as_string() {
         close_file_writer();
         switch (data->state) {
@@ -170,17 +170,16 @@ private:
             data->state = payload_state::memory;
             auto fd = sl::tinydir::file_source(data->filename);
             sl::io::string_sink sink;
-            std::array<char, 4096> buf;
-            sl::io::copy_all(fd, sink, buf);
-            data->buffer = std::move(sink.get_string());            
-        } // fall through     
+            sl::io::copy_all(fd, sink);
+            data->buffer = std::move(sink.get_string());
+        } // fall through
         case payload_state::memory:
-            return data->buffer;               
+            return data->buffer;
         default:
             throw support::exception(TRACEMSG("Invalid payload handler state"));
         }
     }
-    
+
     const std::string& get_data_as_filename() {
         close_file_writer();
         switch (data->state) {

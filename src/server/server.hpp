@@ -24,6 +24,7 @@
 #ifndef WILTON_SERVER_SERVER_HPP
 #define WILTON_SERVER_SERVER_HPP
 
+#include <set>
 #include <vector>
 
 #include "staticlib/pimpl.hpp"
@@ -52,7 +53,9 @@ public:
     server(serverconf::server_config conf, std::vector<sl::support::observer_ptr<http_path>> paths);
     
     void stop();
-    
+ 
+    void broadcast_websocket(const std::string& path, sl::io::span<const char> message,
+            const std::set<std::string>& dest_ids);
 };
 
 } // namespace

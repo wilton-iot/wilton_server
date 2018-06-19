@@ -33,6 +33,7 @@
 #include "staticlib/io.hpp"
 #include "staticlib/json.hpp"
 
+#include "wilton/support/buffer.hpp"
 #include "wilton/support/exception.hpp"
 
 #include "server/response_writer.hpp"
@@ -60,6 +61,8 @@ public:
     
     const std::string& get_request_data();
 
+    support::buffer get_request_data_buffer();
+
     sl::json::value get_request_form_data();
     
     const std::string& get_request_data_filename();
@@ -75,12 +78,18 @@ public:
     response_writer send_later();
     
     void finish();
+
+    bool is_websocket();
+
+    void close_websocket();
     
     // private api
     
     request(void* /* sl::pion::http_request_ptr&& */ req, 
             void* /* sl::pion::http_response_writer_ptr&& */ resp,
             const std::map<std::string, std::string>& mustache_partials);
+
+    request(void* /* sl::pion::websocket_ptr&& */ ws, bool response_allowed = true);
 };
 
 } // namespace

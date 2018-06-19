@@ -24,6 +24,8 @@
 #include "wilton/wilton_server.h"
 
 #include <functional>
+#include <set>
+#include <string>
 #include <vector>
 
 #include "staticlib/config.hpp"
@@ -176,6 +178,36 @@ char* wilton_Server_stop(wilton_Server* server) /* noexcept */ {
     }
 }
 
+char* wilton_Server_broadcast_websocket(wilton_Server* server, const char* path, int path_len,
+        const char* message, int message_len, const char* dest_ids_list_json, int dest_ids_list_json_len) {
+    if (nullptr == server) return wilton::support::alloc_copy(TRACEMSG("Null 'server' parameter specified"));
+    if (nullptr == path) return wilton::support::alloc_copy(TRACEMSG("Null 'path' parameter specified"));
+    if (!sl::support::is_uint32_positive(path_len)) return wilton::support::alloc_copy(TRACEMSG(
+            "Invalid 'path_len' parameter specified: [" + sl::support::to_string(path_len) + "]"));
+    if (nullptr == message) return wilton::support::alloc_copy(TRACEMSG("Null 'message' parameter specified"));
+    if (!sl::support::is_uint32(message_len)) return wilton::support::alloc_copy(TRACEMSG(
+            "Invalid 'message_len' parameter specified: [" + sl::support::to_string(message_len) + "]"));
+    if (nullptr == dest_ids_list_json) return wilton::support::alloc_copy(TRACEMSG("Null 'dest_ids_list_json' parameter specified"));
+    if (!sl::support::is_uint32_positive(dest_ids_list_json_len)) return wilton::support::alloc_copy(TRACEMSG(
+            "Invalid 'dest_ids_list_json_len' parameter specified: [" + sl::support::to_string(dest_ids_list_json_len) + "]"));
+    try {
+        auto path_str = std::string(path, static_cast<size_t>(path_len));
+        auto message_span = sl::io::make_span(message, message_len);
+        auto list_json = sl::json::load({dest_ids_list_json, dest_ids_list_json_len});
+        auto& val_vec = list_json.as_array_or_throw("Invalid 'dest_ids_list_json' parameter specified");
+        auto ids_set = std::set<std::string>();
+        for (auto& val : val_vec) {
+            std::string& st = val.as_string_or_throw("Invalid 'dest_ids_list_json' parameter specified");
+            ids_set.insert(std::move(st));
+        }
+        server->impl().broadcast_websocket(path_str, message_span, ids_set);
+        return nullptr;
+    } catch (const std::exception& e) {
+        return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));
+    }
+
+}
+
 char* wilton_Request_get_request_metadata(wilton_Request* request, char** metadata_json_out,
         int* metadata_json_len_out) /* noexcept */ {
     if (nullptr == request) return wilton::support::alloc_copy(TRACEMSG("Null 'server' parameter specified"));
@@ -199,9 +231,15 @@ char* wilton_Request_get_request_data(wilton_Request* request, char** data_out,
     if (nullptr == data_out) return wilton::support::alloc_copy(TRACEMSG("Null 'data_out' parameter specified"));
     if (nullptr == data_len_out) return wilton::support::alloc_copy(TRACEMSG("Null 'data_len_out' parameter specified"));
     try {
-        const std::string& res = request->impl().get_request_data();
-        *data_out = wilton::support::alloc_copy(res);
-        *data_len_out = static_cast<int>(res.length());
+        if (!request->impl().is_websocket()) {
+            const std::string& res = request->impl().get_request_data();
+            *data_out = wilton::support::alloc_copy(res);
+            *data_len_out = static_cast<int>(res.length());
+        } else {
+            wilton::support::buffer buf = request->impl().get_request_data_buffer();
+            *data_out = buf.data();
+            *data_len_out = buf.size_signed();
+        }
         return nullptr;
     } catch (const std::exception& e) {
         return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));
@@ -332,6 +370,16 @@ char* wilton_Request_send_later(
         wilton::server::response_writer writer = request->impl().send_later();
         wilton_ResponseWriter* writer_ptr = new wilton_ResponseWriter(std::move(writer));
         *writer_out = writer_ptr;
+        return nullptr;
+    } catch (const std::exception& e) {
+        return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));
+    }
+}
+
+char* wilton_Request_close_websocket(wilton_Request* request) /* noexcept */ {
+    if (nullptr == request) return wilton::support::alloc_copy(TRACEMSG("Null 'request' parameter specified"));
+    try {
+        request->impl().close_websocket();
         return nullptr;
     } catch (const std::exception& e) {
         return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));

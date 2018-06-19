@@ -51,6 +51,8 @@ support::buffer server_create(sl::io::span<const char> data);
 
 support::buffer server_stop(sl::io::span<const char> data);
 
+support::buffer server_broadcast_websocket(sl::io::span<const char> data);
+
 support::buffer request_get_metadata(sl::io::span<const char> data);
 
 support::buffer request_get_data(sl::io::span<const char> data);
@@ -69,6 +71,8 @@ support::buffer request_send_mustache(sl::io::span<const char> data);
 
 support::buffer request_send_later(sl::io::span<const char> data);
 
+support::buffer request_close_websocket(sl::io::span<const char> data);
+
 support::buffer request_set_metadata_with_response_writer(sl::io::span<const char> data);
 
 support::buffer request_send_with_response_writer(sl::io::span<const char> data);
@@ -84,6 +88,7 @@ extern "C" char* wilton_module_init() {
         wilton::server::initialize();
         wilton::support::register_wiltoncall("server_create", wilton::server::server_create);
         wilton::support::register_wiltoncall("server_stop", wilton::server::server_stop);
+        wilton::support::register_wiltoncall("server_broadcast_websocket", wilton::server::server_broadcast_websocket);
         wilton::support::register_wiltoncall("request_get_metadata", wilton::server::request_get_metadata);
         wilton::support::register_wiltoncall("request_get_data", wilton::server::request_get_data);
         wilton::support::register_wiltoncall("request_get_form_data", wilton::server::request_get_form_data);
@@ -93,6 +98,7 @@ extern "C" char* wilton_module_init() {
         wilton::support::register_wiltoncall("request_send_temp_file", wilton::server::request_send_temp_file);
         wilton::support::register_wiltoncall("request_send_mustache", wilton::server::request_send_mustache);
         wilton::support::register_wiltoncall("request_send_later", wilton::server::request_send_later);
+        wilton::support::register_wiltoncall("request_close_websocket", wilton::server::request_close_websocket);
         wilton::support::register_wiltoncall("request_set_metadata_with_response_writer", wilton::server::request_set_metadata_with_response_writer);
         wilton::support::register_wiltoncall("request_send_with_response_writer", wilton::server::request_send_with_response_writer);
         // mustache

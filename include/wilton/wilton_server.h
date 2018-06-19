@@ -99,6 +99,15 @@ char* wilton_Server_create(
 char* wilton_Server_stop(
         wilton_Server* server);
 
+char* wilton_Server_broadcast_websocket(
+        wilton_Server* server,
+        const char* path,
+        int path_len,
+        const char* message,
+        int message_length,
+        const char* dest_ids_list_json,
+        int dest_ids_list_json_len);
+
 /*
 // Duplicates in raw headers are handled in the following ways, depending on the header name:
 // Duplicates of age, authorization, content-length, content-type, etag, expires, 
@@ -182,6 +191,9 @@ char* wilton_Request_send_mustache(
 char* wilton_Request_send_later(
         wilton_Request* request,
         wilton_ResponseWriter** writer_out);
+
+char* wilton_Request_close_websocket(
+        wilton_Request* request);
 
 char* wilton_ResponseWriter_set_metadata(
         wilton_ResponseWriter* writer,

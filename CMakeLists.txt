@@ -29,6 +29,7 @@ endif ( )
 if ( WILTON_BUILD_FLAVOUR MATCHES "wheezy" )
     staticlib_add_subdirectory ( ${STATICLIB_DEPS}/external_asio )
 endif ( )
+staticlib_add_subdirectory ( ${STATICLIB_DEPS}/staticlib_websocket )
 staticlib_add_subdirectory ( ${STATICLIB_DEPS}/staticlib_pion )
 staticlib_add_subdirectory ( ${STATICLIB_DEPS}/staticlib_mustache )
 
