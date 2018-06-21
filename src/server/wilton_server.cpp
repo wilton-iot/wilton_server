@@ -238,7 +238,7 @@ char* wilton_Request_get_request_data(wilton_Request* request, char** data_out,
         } else {
             wilton::support::buffer buf = request->impl().get_request_data_buffer();
             *data_out = buf.data();
-            *data_len_out = buf.size_signed();
+            *data_len_out = static_cast<int>(buf.size_signed());
         }
         return nullptr;
     } catch (const std::exception& e) {
