@@ -73,7 +73,7 @@ public:
     sl::json::value to_json() const {
         return {
             { "partialsDirs", [this]{
-                auto ra = sl::ranges::transform(partialsDirs, [this](const std::string& el) {
+                auto ra = sl::ranges::transform(partialsDirs, [](const std::string& el) {
                     return sl::json::value(el);
                 });
                 return ra.to_vector();
