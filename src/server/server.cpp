@@ -98,7 +98,7 @@ public:
             if (sl::utils::starts_with(pa->method, "WS")) {
                 bool response_allowed = "WSCLOSE" != pa->method;
                 server_ptr->add_websocket_handler(pa->method, pa->path,
-                        [ha, this, response_allowed](sl::pion::websocket_ptr ws) {
+                        [ha, response_allowed](sl::pion::websocket_ptr ws) {
                             request req_ws{static_cast<void*> (std::addressof(ws)), response_allowed};
                             ha(req_ws);
                             req_ws.finish();
