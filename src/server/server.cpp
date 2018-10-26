@@ -32,9 +32,10 @@
 #include "openssl/x509.h"
 
 #include "staticlib/config.hpp"
-#include "staticlib/pion.hpp"
+#include "staticlib/json.hpp"
 #include "staticlib/io.hpp"
 #include "staticlib/pimpl/forward_macros.hpp"
+#include "staticlib/pion.hpp"
 #include "staticlib/tinydir.hpp"
 #include "staticlib/utils.hpp"
 
@@ -56,21 +57,16 @@ using partmap_type = const std::map<std::string, std::string>&;
 
 const std::string mustache_ext = ".mustache";
 
-const std::string not_found_msg_start = R"({
-    "code": 404,
-    "message": "Not Found",
-    "description": "The requested URL: [)";
-const std::string not_found_msg_finish = R"(] was not found on this server."
-})";
-
 void handle_not_found_request(sl::pion::http_request_ptr req, sl::pion::response_writer_ptr resp) {
+    auto msg = sl::json::value({
+        {"error", {
+            { "code", sl::pion::http_request::RESPONSE_CODE_NOT_FOUND },
+            { "message", sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND },
+            { "path", req->get_resource() }}}
+    }).dumps();
     resp->get_response().set_status_code(404);
-    resp->get_response().set_status_message("Not Found");
-    resp->write_nocopy(not_found_msg_start);
-    auto res = req->get_resource();
-    std::replace(res.begin(), res.end(), '"', '\'');
-    resp->write(res);
-    resp->write_nocopy(not_found_msg_finish);
+    resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND);
+    resp->write(msg);
     resp->send(std::move(resp));
 }
 
