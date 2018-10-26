@@ -144,6 +144,8 @@ public:
     }
 
     void set_response_metadata(request&, serverconf::response_metadata rm) {
+        if (request_state::created != state.load(std::memory_order_acquire)) throw support::exception(TRACEMSG(
+                "Invalid request lifecycle operation meta, request is already committed"));
         if (websocket) throw support::exception(TRACEMSG(
                 "Response metadata not supported with WebSocket"));
         resp->get_response().set_status_code(rm.statusCode);
