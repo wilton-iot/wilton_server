@@ -41,10 +41,27 @@
 namespace wilton {
 namespace server {
 
+namespace { // anonymous
+
+void send404(sl::pion::response_writer_ptr resp, const std::string& url_path) {
+    auto msg = sl::json::value({
+        {"error", {
+            { "code", sl::pion::http_request::RESPONSE_CODE_NOT_FOUND },
+            { "message", sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND },
+            { "path", url_path }}}
+    }).dumps();
+    resp->get_response().set_status_code(sl::pion::http_request::RESPONSE_CODE_NOT_FOUND);
+    resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND);
+    resp->write(msg);
+    resp->send(std::move(resp));
+}
+
+} // namespace
+
 class zip_handler {
     std::shared_ptr<serverconf::document_root> conf;
     std::shared_ptr<sl::unzip::file_index> idx;
-    
+
 public:
     // must be copyable to satisfy std::function
     zip_handler(const zip_handler& other) :
@@ -56,36 +73,39 @@ public:
         this->idx = other.idx;
         return *this;
     }
-    
+
     zip_handler(const serverconf::document_root& conf) :
     conf(std::make_shared<serverconf::document_root>(conf.clone())),
     idx(std::make_shared<sl::unzip::file_index>(conf.zipPath)) { }
-    
-    // todo: error messages format
-    // todo: path checks
+
     void operator()(sl::pion::http_request_ptr req, sl::pion::response_writer_ptr resp) {
-        std::string url_path = conf->zipInnerPrefix + std::string{req->get_resource(), conf->resource.length()};
-        sl::unzip::file_entry en = idx->find_zip_entry(url_path);
-        if (!en.is_empty()) {
-            auto stream_ptr = sl::unzip::open_zip_entry(*idx, url_path);
-            set_resp_headers(url_path, resp->get_response());
-            auto sender = sl::support::make_unique<response_stream_sender>(std::move(resp), std::move(stream_ptr));
-            sender->send(std::move(sender));
-        } else {
-            resp->get_response().set_status_code(sl::pion::http_request::RESPONSE_CODE_NOT_FOUND);
-            resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND);
-            resp->write(sl::support::to_string(sl::pion::http_request::RESPONSE_CODE_NOT_FOUND));
-            resp->write_nocopy(" ");
-            resp->write_nocopy(": [");
-            resp->write(url_path);
-            resp->write_nocopy("]\n");
-            resp->send(std::move(resp));
+        if (req->get_resource().length() < conf->resource.length()) {
+            send404(std::move(resp), req->get_resource());
+            return;
         }
+        auto path = std::string(req->get_resource(), conf->resource.length());
+        if (0 == path.length()) {
+            send404(std::move(resp), req->get_resource());
+            return;
+        }
+        if ('/' == path.front()) {
+            path = path.substr(1);
+        }
+        std::string url_path = conf->zipInnerPrefix + path;
+        sl::unzip::file_entry en = idx->find_zip_entry(url_path);
+        if (en.is_empty()) {
+            send404(std::move(resp), url_path);
+            return;
+        }
+        auto stream_ptr = sl::unzip::open_zip_entry(*idx, url_path);
+        set_resp_headers(url_path, resp->get_response());
+        auto sender = sl::support::make_unique<response_stream_sender>(std::move(resp), std::move(stream_ptr));
+        sender->send(std::move(sender));
     }
 
 private:
     void set_resp_headers(const std::string& url_path, sl::pion::http_response& resp) {
-        std::string ct{"application/octet-stream"};
+        auto ct = std::string("application/octet-stream");
         for (const auto& mi : conf->mimeTypes) {
             if (sl::utils::ends_with(url_path, mi.extension)) {
                 ct = mi.mime;
@@ -95,8 +115,8 @@ private:
         resp.change_header("Content-Type", ct);
         // set caching
         resp.change_header("Cache-Control", "max-age=" + sl::support::to_string(conf->cacheMaxAgeSeconds) + ", public");
-    }    
-    
+    }
+
 };
 
 } // namespace

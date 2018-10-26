@@ -69,7 +69,7 @@ public:
         this->mimeTypes = std::move(other.mimeTypes);
         return *this;
     }
-    
+
     document_root() { }
     
     document_root(const std::string& resource, const std::string& dirPath, 
@@ -81,7 +81,7 @@ public:
     zipInnerPrefix(zipInnerPrefix.data(), zipInnerPrefix.length()), 
     cacheMaxAgeSeconds(cacheMaxAgeSeconds), 
     mimeTypes(mimes_copy(mimeTypes)) { }
-    
+
     document_root(const sl::json::value& json) {
         for (const sl::json::field& fi : json.as_object()) {
             auto& name = fi.name();
@@ -109,7 +109,7 @@ public:
         if (0 == dirPath.length() && 0 == zipPath.length()) throw support::exception(TRACEMSG(
                     "Invalid 'documentRoot.dirPath' and 'documentRoot.zipPath' fields: [], []"));
     }
-       
+
     sl::json::value to_json() const {
         namespace sr = staticlib::ranges;
         return {
@@ -126,15 +126,15 @@ public:
             }()}
         };
     }
-    
+
     bool is_empty() {
         return 0 == resource.length();
     }
-    
+
     document_root clone() const {
         return document_root(resource, dirPath, zipPath, zipInnerPrefix, cacheMaxAgeSeconds, mimeTypes);
     }
-    
+
 private:
     static std::vector<mime_type> mimes_copy(const std::vector<mime_type>& vec) {
         namespace sr = staticlib::ranges;

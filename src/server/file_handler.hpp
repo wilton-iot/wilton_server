@@ -30,6 +30,7 @@
 #include <string>
 
 #include "staticlib/config.hpp"
+#include "staticlib/json.hpp"
 #include "staticlib/io.hpp"
 #include "staticlib/pion.hpp"
 #include "staticlib/tinydir.hpp"
@@ -45,7 +46,7 @@ namespace server {
 
 class file_handler {
     std::shared_ptr<serverconf::document_root> conf;
-    
+
 public:
     // must be copyable to satisfy std::function
     file_handler(const file_handler& other) :
@@ -56,29 +57,29 @@ public:
         return *this;
     }
 
-    // todo: path leading slash check
     file_handler(const serverconf::document_root& conf) :
     conf(std::make_shared<serverconf::document_root>(conf.clone())) {
         if (0 == this->conf->dirPath.length()) throw support::exception(TRACEMSG(
                 "Invalid empty 'dirPath' specified"));
     }
-    
-    // todo: error messages format
-    // todo: path checks
+
+    // note: it may be better to add some pre-checks to the supplied file path
+    // before providing it to FS
     void operator()(sl::pion::http_request_ptr req, sl::pion::response_writer_ptr resp) {
         std::string url_path = std::string{req->get_resource(), conf->resource.length()};
         if (url_path.find("..") != std::string::npos) {
+            auto msg = sl::json::value({
+                {"error", {
+                    { "code", sl::pion::http_request::RESPONSE_CODE_BAD_REQUEST },
+                    { "message", sl::pion::http_request::RESPONSE_MESSAGE_BAD_REQUEST },
+                    { "path", url_path }}}
+            }).dumps();
             resp->get_response().set_status_code(sl::pion::http_request::RESPONSE_CODE_BAD_REQUEST);
             resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_BAD_REQUEST);
-            resp->write(sl::support::to_string(sl::pion::http_request::RESPONSE_CODE_BAD_REQUEST));
-            resp->write_nocopy(" ");
-            resp->write_nocopy(sl::pion::http_request::RESPONSE_MESSAGE_BAD_REQUEST);
-            resp->write_nocopy(": [");
-            resp->write(url_path);
-            resp->write_nocopy("]\n");
+            resp->write(msg);
             resp->send(std::move(resp));
         } else {
-            std::string file_path = std::string(conf->dirPath) +"/" + url_path;
+            std::string file_path = std::string(conf->dirPath) + "/" + url_path;
             auto fd_opt = open_file_source(file_path);
             if (fd_opt.has_value()) {
                 auto fd_ptr = sl::io::make_source_istream_ptr(std::move(fd_opt.value()));
@@ -86,22 +87,23 @@ public:
                 auto sender = sl::support::make_unique<response_stream_sender>(std::move(resp), std::move(fd_ptr));
                 sender->send(std::move(sender));
             } else {
+                auto msg = sl::json::value({
+                    {"error", {
+                        { "code", sl::pion::http_request::RESPONSE_CODE_NOT_FOUND },
+                        { "message", sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND },
+                        { "path", url_path }}}
+                }).dumps();
                 resp->get_response().set_status_code(sl::pion::http_request::RESPONSE_CODE_NOT_FOUND);
                 resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND);
-                resp->write(sl::support::to_string(sl::pion::http_request::RESPONSE_CODE_NOT_FOUND));
-                resp->write_nocopy(" ");
-                resp->write_nocopy(sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND);
-                resp->write_nocopy(": [");
-                resp->write(url_path);
-                resp->write_nocopy("]\n");
+                resp->write(msg);
                 resp->send(std::move(resp));
             }
         }
     }
-    
+
 private:
     void set_resp_headers(const std::string& url_path, sl::pion::http_response& resp) {
-        std::string ct{"application/octet-stream"};
+        auto ct = std::string("application/octet-stream");
         for(const auto& mi : conf->mimeTypes) {
             if (sl::utils::ends_with(url_path, mi.extension)) {
                 ct = mi.mime;
@@ -113,10 +115,15 @@ private:
         resp.change_header("Cache-Control", "max-age=" + sl::support::to_string(conf->cacheMaxAgeSeconds) + ", public");
     }
 
-    // todo: fixme
     static sl::support::optional<sl::tinydir::file_source> open_file_source(const std::string& file_path) {
         try {
-            return sl::support::make_optional(sl::tinydir::file_source(file_path));
+            auto res = sl::support::make_optional(sl::tinydir::file_source(file_path));
+            // directory can be opened as a source, but cannot be read from
+            auto pa = sl::tinydir::path(file_path);
+            if (!pa.is_directory()) {
+                return res;
+            }
+            return sl::support::optional<sl::tinydir::file_source>();
         } catch(const sl::tinydir::tinydir_exception&){
             return sl::support::optional<sl::tinydir::file_source>();
         }
