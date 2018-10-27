@@ -65,13 +65,10 @@ if ( STATICLIB_TOOLCHAIN MATCHES "windows_.+" )
 endif ( )
 
 add_library ( ${PROJECT_NAME} SHARED
-        # server
-        ${CMAKE_CURRENT_LIST_DIR}/src/server/request.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/server/response_writer.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/server/server.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/server/wilton_server.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/server/wiltoncall_server.cpp
-        # export
+        ${CMAKE_CURRENT_LIST_DIR}/src/request.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/response_writer.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/server.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/wilton_server.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/wiltoncall_server.cpp
         ${${PROJECT_NAME}_RESFILE}
         ${${PROJECT_NAME}_DEFFILE} )

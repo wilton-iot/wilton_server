@@ -38,8 +38,8 @@
 
 #include "wilton/support/exception.hpp"
 
+#include "conf/document_root.hpp"
 #include "response_stream_sender.hpp"
-#include "serverconf/document_root.hpp"
 
 namespace wilton {
 namespace server {

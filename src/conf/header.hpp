@@ -21,8 +21,8 @@
  * Created on May 5, 2016, 9:00 PM
  */
 
-#ifndef WILTON_SERVERCONF_HEADER_HPP
-#define WILTON_SERVERCONF_HEADER_HPP
+#ifndef WILTON_SERVER_CONF_HEADER_HPP
+#define WILTON_SERVER_CONF_HEADER_HPP
 
 #include <string>
 
@@ -85,5 +85,5 @@ public:
 } // namepspace
 }
 
-#endif /* WILTON_SERVERCONF_HEADER_HPP */
+#endif /* WILTON_SERVER_CONF_HEADER_HPP */
 

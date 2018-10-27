@@ -21,8 +21,8 @@
  * Created on May 11, 2016, 1:23 PM
  */
 
-#ifndef WILTON_MIME_TYPE_HPP
-#define WILTON_MIME_TYPE_HPP
+#ifndef WILTON_SERVER_CONF_MIME_TYPE_HPP
+#define WILTON_SERVER_CONF_MIME_TYPE_HPP
 
 #include <string>
 #include <vector>
@@ -92,5 +92,5 @@ public:
 } // namespace
 }
 
-#endif /* WILTON_MIME_TYPE_HPP */
+#endif /* WILTON_SERVER_CONF_MIME_TYPE_HPP */
 

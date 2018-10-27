@@ -30,7 +30,4 @@ EXPORTS
     wilton_ResponseWriter_set_metadata
     wilton_ResponseWriter_send
 
-    wilton_render_mustache
-    wilton_render_mustache_file
-
     wilton_module_init

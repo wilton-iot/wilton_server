@@ -21,8 +21,8 @@
  * Created on May 5, 2016, 7:27 PM
  */
 
-#ifndef WILTON_SERVERCONF_DOCUMENT_ROOT_HPP
-#define WILTON_SERVERCONF_DOCUMENT_ROOT_HPP
+#ifndef WILTON_SERVER_CONF_DOCUMENT_ROOT_HPP
+#define WILTON_SERVER_CONF_DOCUMENT_ROOT_HPP
 
 #include <cstdint>
 #include <string>
@@ -34,7 +34,7 @@
 
 #include "wilton/support/exception.hpp"
 
-#include "serverconf/mime_type.hpp"
+#include "conf/mime_type.hpp"
 
 namespace wilton {
 namespace serverconf {
@@ -161,5 +161,5 @@ private:
 } // namespace
 }
 
-#endif /* WILTON_SERVERCONF_DOCUMENT_ROOT_HPP */
+#endif /* WILTON_SERVER_CONF_DOCUMENT_ROOT_HPP */
 

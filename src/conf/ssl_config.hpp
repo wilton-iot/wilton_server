@@ -21,8 +21,8 @@
  * Created on June 13, 2016, 11:35 AM
  */
 
-#ifndef WILTON_SERVERCONF_SSL_CONFIG_HPP
-#define WILTON_SERVERCONF_SSL_CONFIG_HPP
+#ifndef WILTON_SERVER_CONF_SSL_CONFIG_HPP
+#define WILTON_SERVER_CONF_SSL_CONFIG_HPP
 
 #include <string>
 
@@ -96,5 +96,5 @@ public:
 } // namespace
 }
 
-#endif /* WILTON_SERVERCONF_SSL_CONFIG_HPP */
+#endif /* WILTON_SERVER_CONF_SSL_CONFIG_HPP */
 

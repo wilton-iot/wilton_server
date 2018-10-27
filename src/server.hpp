@@ -29,9 +29,9 @@
 
 #include "staticlib/pimpl.hpp"
 
-#include "server/http_path.hpp"
-#include "server/request.hpp"
-#include "serverconf/server_config.hpp"
+#include "conf/server_config.hpp"
+#include "http_path.hpp"
+#include "request.hpp"
 
 namespace wilton {
 namespace server {

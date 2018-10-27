@@ -35,9 +35,7 @@
 
 #include "wilton/support/exception.hpp"
 
-#include "server/request.hpp"
-
-
+#include "request.hpp"
 
 namespace wilton {
 namespace server {

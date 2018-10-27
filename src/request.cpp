@@ -21,7 +21,7 @@
  * Created on June 2, 2016, 5:16 PM
  */
 
-#include "server/request.hpp"
+#include "request.hpp"
 
 #include <cctype>
 #include <algorithm>
@@ -43,13 +43,12 @@
 #include "wilton/support/exception.hpp"
 #include "wilton/support/misc.hpp"
 
-#include "server/response_stream_sender.hpp"
-#include "server/request_payload_handler.hpp"
-#include "server/server.hpp"
-
-#include "serverconf/header.hpp"
-#include "serverconf/response_metadata.hpp"
-#include "serverconf/request_metadata.hpp"
+#include "conf/header.hpp"
+#include "conf/response_metadata.hpp"
+#include "conf/request_metadata.hpp"
+#include "response_stream_sender.hpp"
+#include "request_payload_handler.hpp"
+#include "server.hpp"
 
 namespace wilton {
 namespace server {

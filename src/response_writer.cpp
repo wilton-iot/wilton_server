@@ -21,7 +21,7 @@
  * Created on June 19, 2016, 9:49 PM
  */
 
-#include "server/response_writer.hpp"
+#include "response_writer.hpp"
 
 #include "staticlib/pion.hpp"
 #include "staticlib/pimpl/forward_macros.hpp"

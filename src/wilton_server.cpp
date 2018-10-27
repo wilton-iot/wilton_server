@@ -35,12 +35,11 @@
 #include "wilton/support/alloc.hpp"
 #include "wilton/support/buffer.hpp"
 
-#include "server/http_path.hpp"
-#include "server/request.hpp"
-#include "server/response_writer.hpp"
-#include "server/server.hpp"
-
-#include "serverconf/response_metadata.hpp"
+#include "conf/response_metadata.hpp"
+#include "http_path.hpp"
+#include "request.hpp"
+#include "response_writer.hpp"
+#include "server.hpp"
 
 struct wilton_Server {
 private:

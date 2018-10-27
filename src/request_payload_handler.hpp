@@ -40,7 +40,7 @@
 
 #include "wilton/support/exception.hpp"
 
-#include "serverconf/request_payload_config.hpp"
+#include "conf/request_payload_config.hpp"
 
 namespace wilton {
 namespace server {

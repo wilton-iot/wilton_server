@@ -21,8 +21,8 @@
  * Created on May 5, 2016, 7:20 PM
  */
 
-#ifndef WILTON_SERVERCONF_SERVER_CONFIG_HPP
-#define WILTON_SERVERCONF_SERVER_CONFIG_HPP
+#ifndef WILTON_SERVER_CONF_SERVER_CONFIG_HPP
+#define WILTON_SERVER_CONF_SERVER_CONFIG_HPP
 
 #include <cstdint>
 #include <string>
@@ -33,10 +33,10 @@
 
 #include "wilton/support/exception.hpp"
 
-#include "serverconf/document_root.hpp"
-#include "serverconf/mustache_config.hpp"
-#include "serverconf/request_payload_config.hpp"
-#include "serverconf/ssl_config.hpp"
+#include "conf/document_root.hpp"
+#include "conf/mustache_config.hpp"
+#include "conf/request_payload_config.hpp"
+#include "conf/ssl_config.hpp"
 
 namespace wilton {
 namespace serverconf {
@@ -134,5 +134,5 @@ public:
 } // namespace
 }
 
-#endif /* WILTON_SERVERCONF_SERVER_CONFIG_HPP */
+#endif /* WILTON_SERVER_CONF_SERVER_CONFIG_HPP */
 

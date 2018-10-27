@@ -21,7 +21,7 @@
  * Created on June 2, 2016, 5:33 PM
  */
 
-#include "server/server.hpp"
+#include "server.hpp"
 
 #include <functional>
 #include <memory>
@@ -41,13 +41,12 @@
 
 #include "wilton/support/exception.hpp"
 
-#include "server/file_handler.hpp"
-#include "server/request.hpp"
-#include "server/request_payload_handler.hpp"
-#include "server/zip_handler.hpp"
-
-#include "server/mustache_cache.hpp"
-#include "serverconf/server_config.hpp"
+#include "conf/server_config.hpp"
+#include "file_handler.hpp"
+#include "mustache_cache.hpp"
+#include "request.hpp"
+#include "request_payload_handler.hpp"
+#include "zip_handler.hpp"
 
 namespace wilton {
 namespace server {

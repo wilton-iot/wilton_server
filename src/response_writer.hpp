@@ -31,7 +31,7 @@
 
 #include "wilton/support/exception.hpp"
 
-#include "serverconf/response_metadata.hpp"
+#include "conf/response_metadata.hpp"
 
 namespace wilton {
 namespace server {

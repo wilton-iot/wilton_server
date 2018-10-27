@@ -29,22 +29,6 @@ addons:
       - build-essential
       - pkg-config
       - zip
-      - zlib1g-dev
-      - libjansson-dev
-      - liblog4cplus-dev
-      - libssl-dev
-      - libcurl4-openssl-dev
-      - libpopt-dev
-      - libsqlite3-dev
-      - libpq-dev
-      - libpng12-dev
-      - libusb-1.0-0-dev
-      - libudev-dev
-      - libglib2.0-dev
-      - libjavascriptcoregtk-3.0-dev
-      - libgtk-3-dev
-      - libwebkitgtk-3.0-dev
-      - valgrind
 
 before_install:
   - export CC=
@@ -52,7 +36,7 @@ before_install:
 
 install:
   - cd ..
-  - git clone https://github.com/wilton-iot/wilton
+  - git clone --quiet https://github.com/wilton-iot/wilton
   - cd wilton
   - bash ./resources/ci/travis-checkout.sh
 

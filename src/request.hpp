@@ -36,10 +36,10 @@
 #include "wilton/support/buffer.hpp"
 #include "wilton/support/exception.hpp"
 
-#include "server/mustache_cache.hpp"
-#include "server/response_writer.hpp"
-#include "serverconf/response_metadata.hpp"
-#include "serverconf/request_metadata.hpp"
+#include "conf/response_metadata.hpp"
+#include "conf/request_metadata.hpp"
+#include "mustache_cache.hpp"
+#include "response_writer.hpp"
 
 namespace wilton {
 namespace server {
