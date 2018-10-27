@@ -31,6 +31,7 @@ if ( WILTON_BUILD_FLAVOUR MATCHES "wheezy" )
 endif ( )
 staticlib_add_subdirectory ( ${STATICLIB_DEPS}/staticlib_websocket )
 staticlib_add_subdirectory ( ${STATICLIB_DEPS}/staticlib_pion )
+# todo: think about correct ways to drop this dep without loosing streaming resp
 staticlib_add_subdirectory ( ${STATICLIB_DEPS}/staticlib_mustache )
 
 # dependencies check
@@ -64,9 +65,6 @@ if ( STATICLIB_TOOLCHAIN MATCHES "windows_.+" )
 endif ( )
 
 add_library ( ${PROJECT_NAME} SHARED
-        # mustache
-        ${CMAKE_CURRENT_LIST_DIR}/src/mustache/wilton_mustache.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/mustache/wiltoncall_mustache.cpp
         # server
         ${CMAKE_CURRENT_LIST_DIR}/src/server/request.cpp
         ${CMAKE_CURRENT_LIST_DIR}/src/server/response_writer.cpp

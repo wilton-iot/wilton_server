@@ -78,6 +78,7 @@ class request::impl : public sl::pimpl::object::impl {
     // owning ptrs here to not restrict clients async ops
     sl::pion::http_request_ptr req;
     sl::pion::response_writer_ptr resp;
+    sl::support::observer_ptr<mustache_cache> mustache_templates;
     sl::support::observer_ptr<const std::map<std::string, std::string>> mustache_partials;
 
     // ws state
@@ -87,10 +88,12 @@ class request::impl : public sl::pimpl::object::impl {
 public:
 
     impl(void* /* sl::pion::http_request_ptr&& */ req, void* /* sl::pion::response_writer_ptr&& */ resp,
+            mustache_cache& mustache_templates,
             const std::map<std::string, std::string>& mustache_partials) :
     state(request_state::created),
     req(std::move(*static_cast<sl::pion::http_request_ptr*>(req))),
     resp(std::move(*static_cast<sl::pion::response_writer_ptr*> (resp))),
+    mustache_templates(mustache_templates),
     mustache_partials(mustache_partials) { }
 
     impl(void* /* sl::pion::websocket_ptr&& */ wsocket, bool response_allowed) :
@@ -195,7 +198,8 @@ public:
             }
             return mustache_file_path;
         } ();
-        auto mp = sl::mustache::source(mpath, std::move(json), *mustache_partials);
+        const std::string& cached_template = mustache_templates->get(mpath);
+        auto mp = sl::mustache::source(std::move(json), cached_template, *mustache_partials);
         auto mp_ptr = sl::io::make_source_istream_ptr(std::move(mp));
         auto sender = sl::support::make_unique<response_stream_sender>(std::move(resp), std::move(mp_ptr));
         sender->send(std::move(sender));
@@ -256,7 +260,7 @@ private:
         }
     }
 
-    // todo: cookies
+    // note: there are no special processing for cookies
     // Duplicates in raw headers are handled in the following ways, depending on the header name:
     // Duplicates of age, authorization, content-length, content-type, etag, expires, 
     // from, host, if-modified-since, if-unmodified-since, last-modified, location, 
@@ -308,7 +312,7 @@ private:
     }
 
 };
-PIMPL_FORWARD_CONSTRUCTOR(request, (void*)(void*)(partmap_type), (), support::exception)
+PIMPL_FORWARD_CONSTRUCTOR(request, (void*)(void*)(mustache_cache&)(partmap_type), (), support::exception)
 PIMPL_FORWARD_CONSTRUCTOR(request, (void*)(bool), (), support::exception)
 PIMPL_FORWARD_METHOD(request, serverconf::request_metadata, get_request_metadata, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, const std::string&, get_request_data, (), (), support::exception)

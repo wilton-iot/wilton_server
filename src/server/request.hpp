@@ -36,6 +36,7 @@
 #include "wilton/support/buffer.hpp"
 #include "wilton/support/exception.hpp"
 
+#include "server/mustache_cache.hpp"
 #include "server/response_writer.hpp"
 #include "serverconf/response_metadata.hpp"
 #include "serverconf/request_metadata.hpp"
@@ -87,6 +88,7 @@ public:
     
     request(void* /* sl::pion::http_request_ptr&& */ req, 
             void* /* sl::pion::http_response_writer_ptr&& */ resp,
+            mustache_cache& mustache_templates,
             const std::map<std::string, std::string>& mustache_partials);
 
     request(void* /* sl::pion::websocket_ptr&& */ ws, bool response_allowed = true);

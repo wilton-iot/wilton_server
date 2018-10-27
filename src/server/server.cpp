@@ -46,6 +46,7 @@
 #include "server/request_payload_handler.hpp"
 #include "server/zip_handler.hpp"
 
+#include "server/mustache_cache.hpp"
 #include "serverconf/server_config.hpp"
 
 namespace wilton {
@@ -73,11 +74,13 @@ void handle_not_found_request(sl::pion::http_request_ptr req, sl::pion::response
 } // namespace
 
 class server::impl : public sl::pimpl::object::impl {
+    mustache_cache mustache_templates;
     std::map<std::string, std::string> mustache_partials;
     std::unique_ptr<sl::pion::http_server> server_ptr;
 
 public:
     impl(serverconf::server_config conf, std::vector<sl::support::observer_ptr<http_path>> paths) :
+    mustache_templates(),
     mustache_partials(load_partials(conf.mustache)),
     server_ptr(std::unique_ptr<sl::pion::http_server>(new sl::pion::http_server(
             conf.numberOfThreads, 
@@ -103,7 +106,8 @@ public:
                 server_ptr->add_handler(pa->method, pa->path,
                         [ha, this](sl::pion::http_request_ptr req, sl::pion::response_writer_ptr resp) {
                             request req_wrap{static_cast<void*> (std::addressof(req)),
-                                    static_cast<void*> (std::addressof(resp)), this->mustache_partials};
+                                    static_cast<void*> (std::addressof(resp)),
+                                    this->mustache_templates, this->mustache_partials};
                             ha(req_wrap);
                             req_wrap.finish();
                         });
