@@ -58,12 +58,12 @@ using partmap_type = const std::map<std::string, std::string>&;
 const std::string mustache_ext = ".mustache";
 
 void handle_not_found_request(sl::pion::http_request_ptr req, sl::pion::response_writer_ptr resp) {
-    auto msg = sl::json::value({
+    auto msg = sl::json::dumps({
         {"error", {
             { "code", sl::pion::http_request::RESPONSE_CODE_NOT_FOUND },
             { "message", sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND },
             { "path", req->get_resource() }}}
-    }).dumps();
+    });
     resp->get_response().set_status_code(404);
     resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND);
     resp->write(msg);

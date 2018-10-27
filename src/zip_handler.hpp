@@ -43,12 +43,12 @@ namespace server {
 namespace { // anonymous
 
 void send404(sl::pion::response_writer_ptr resp, const std::string& url_path) {
-    auto msg = sl::json::value({
+    auto msg = sl::json::dumps({
         {"error", {
             { "code", sl::pion::http_request::RESPONSE_CODE_NOT_FOUND },
             { "message", sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND },
             { "path", url_path }}}
-    }).dumps();
+    });
     resp->get_response().set_status_code(sl::pion::http_request::RESPONSE_CODE_NOT_FOUND);
     resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND);
     resp->write(msg);

@@ -205,25 +205,6 @@ char* wilton_ResponseWriter_send(
         const char* data,
         int data_len);
 
-
-// mustache
-
-char* wilton_render_mustache(
-        const char* template_text,
-        int template_text_len,
-        const char* values_json,
-        int values_json_len,
-        char** output_text_out,
-        int* output_text_len_out);
-
-char* wilton_render_mustache_file(
-        const char* template_file_path,
-        int template_file_path_len,
-        const char* values_json,
-        int values_json_len,
-        char** output_text_out,
-        int* output_text_len_out);
-
 #ifdef __cplusplus
 }
 #endif

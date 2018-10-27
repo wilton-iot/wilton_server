@@ -68,12 +68,12 @@ public:
     void operator()(sl::pion::http_request_ptr req, sl::pion::response_writer_ptr resp) {
         std::string url_path = std::string{req->get_resource(), conf->resource.length()};
         if (url_path.find("..") != std::string::npos) {
-            auto msg = sl::json::value({
+            auto msg = sl::json::dumps({
                 {"error", {
                     { "code", sl::pion::http_request::RESPONSE_CODE_BAD_REQUEST },
                     { "message", sl::pion::http_request::RESPONSE_MESSAGE_BAD_REQUEST },
                     { "path", url_path }}}
-            }).dumps();
+            });
             resp->get_response().set_status_code(sl::pion::http_request::RESPONSE_CODE_BAD_REQUEST);
             resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_BAD_REQUEST);
             resp->write(msg);
@@ -87,12 +87,12 @@ public:
                 auto sender = sl::support::make_unique<response_stream_sender>(std::move(resp), std::move(fd_ptr));
                 sender->send(std::move(sender));
             } else {
-                auto msg = sl::json::value({
+                auto msg = sl::json::dumps({
                     {"error", {
                         { "code", sl::pion::http_request::RESPONSE_CODE_NOT_FOUND },
                         { "message", sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND },
                         { "path", url_path }}}
-                }).dumps();
+                });
                 resp->get_response().set_status_code(sl::pion::http_request::RESPONSE_CODE_NOT_FOUND);
                 resp->get_response().set_status_message(sl::pion::http_request::RESPONSE_MESSAGE_NOT_FOUND);
                 resp->write(msg);
