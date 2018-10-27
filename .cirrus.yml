@@ -39,7 +39,7 @@ task:
     cd wilton
     bash ./resources/ci/cirrus-checkout.sh
     echo "Replacing repo to test PR"
-  - rm -r modules/wilton_server
+    rm -r modules/wilton_server
     cp -a /tmp/cirrus-ci-build modules/wilton_server
     pushd jni && git rev-parse HEAD && popd
     bash ./resources/ci/cirrus.sh
