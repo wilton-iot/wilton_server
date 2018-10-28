@@ -32,12 +32,12 @@ task:
       memory: 1G
 
   script: |
-    apt-get update
-    apt-get upgrade -y
     cd ..
     git clone --quiet https://github.com/wilton-iot/wilton
     cd wilton
     bash ./resources/ci/cirrus-checkout.sh
+    echo "Updating modules to master"
+    bash ./resources/ci/master-modules.sh
     echo "Replacing repo to test PR"
     rm -r modules/wilton_server
     cp -a /tmp/cirrus-ci-build modules/wilton_server

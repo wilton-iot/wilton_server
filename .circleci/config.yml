@@ -29,6 +29,8 @@ jobs:
             git clone --quiet https://github.com/wilton-iot/wilton
             cd wilton
             bash ./resources/ci/circle-checkout.sh
+            echo "Updating modules to master"
+            bash ./resources/ci/master-modules.sh
             echo "Replacing repo to test PR"
             rm -r modules/wilton_server
             cp -a /root/project modules/wilton_server
@@ -49,6 +51,8 @@ jobs:
             git clone --quiet https://github.com/wilton-iot/wilton
             cd wilton
             bash ./resources/ci/circle-checkout.sh
+            echo "Updating modules to master"
+            bash ./resources/ci/master-modules.sh
             echo "Replacing repo to test PR"
             rm -r modules/wilton_server
             cp -a /root/project modules/wilton_server

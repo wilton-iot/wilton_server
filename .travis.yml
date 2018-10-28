@@ -41,8 +41,10 @@ install:
   - bash ./resources/ci/travis-checkout.sh
 
 before_script:
-  - echo "Replacing repo to test PR"
   - set -e
+  - echo "Updating modules to master"
+  - bash ./resources/ci/master-modules.sh
+  - echo "Replacing repo to test PR"
   - rm -r modules/wilton_server
   - mv ../wilton_server modules/
   - set +e
