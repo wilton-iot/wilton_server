@@ -18,6 +18,14 @@ clone_folder: c:\projects\wilton_server
 
 build: off
 
+environment:
+  matrix:
+    - WILTON_WIN_ARCH: _x86.
+    - WILTON_WIN_ARCH: .
+
+matrix:
+  fast_finish: true
+
 install:
   - cd ..
   - git clone https://github.com/wilton-iot/wilton
@@ -34,4 +42,4 @@ build_script:
   - cd modules\wilton_server
   - git rev-parse HEAD
   - cd ..\..
-  - cmd /c resources\ci\appveyor.bat
+  - cmd /c resources\ci\appveyor%WILTON_WIN_ARCH%bat
