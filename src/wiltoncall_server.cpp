@@ -115,42 +115,36 @@ public:
 
 using server_reg_entry_type = std::pair<wilton_Server*, server_ctx>;
 
-void server_deleter(server_reg_entry_type* ptr) {
-    wilton_Server_stop(ptr->first);
-    delete ptr;
-}
-
-void request_deleter(wilton_Request* request) STATICLIB_NOEXCEPT {
-    std::string conf = sl::json::dumps({
-        { "statusCode", 503 },
-        { "statusMessage", "Service Unavailable" }
-    });
-    wilton_Request_set_response_metadata(request, conf.c_str(), static_cast<int> (conf.length()));
-    wilton_Request_send_response(request, "", 0);
-}
-
-void response_writer_deleter(wilton_ResponseWriter* writer) STATICLIB_NOEXCEPT {
-    wilton_ResponseWriter_send(writer, "", 0);
-}
-
 // initialized from wilton_module_init
 std::shared_ptr<support::unique_handle_registry<server_reg_entry_type>> server_registry() {
-    static auto registry = std::make_shared<
-            support::unique_handle_registry<server_reg_entry_type>>(server_deleter);
+    static auto registry = std::make_shared<support::unique_handle_registry<server_reg_entry_type>>(
+            [](server_reg_entry_type* pa) STATICLIB_NOEXCEPT {
+                wilton_Server_stop(pa->first);
+                delete pa;
+            });
     return registry;
 }
 
 // initialized from wilton_module_init
 std::shared_ptr<support::unique_handle_registry<wilton_Request>> request_registry() {
-    static auto registry = std::make_shared<
-            support::unique_handle_registry<wilton_Request>>(request_deleter);
+    static auto registry = std::make_shared<support::unique_handle_registry<wilton_Request>>(
+            [](wilton_Request* request) STATICLIB_NOEXCEPT {
+                std::string conf = sl::json::dumps({
+                    { "statusCode", 503 },
+                    { "statusMessage", "Service Unavailable" }
+                });
+                wilton_Request_set_response_metadata(request, conf.c_str(), static_cast<int> (conf.length()));
+                wilton_Request_send_response(request, "", 0);
+            });
     return registry;
 }
 
 // initialized from wilton_module_init
 std::shared_ptr<support::unique_handle_registry<wilton_ResponseWriter>> response_writer_registry() {
-    static auto registry = std::make_shared<
-            support::unique_handle_registry<wilton_ResponseWriter>>(response_writer_deleter);
+    static auto registry = std::make_shared<support::unique_handle_registry<wilton_ResponseWriter>>(
+            [](wilton_ResponseWriter* writer) STATICLIB_NOEXCEPT {
+                wilton_ResponseWriter_send(writer, "", 0);
+            });
     return registry;
 }
 
