@@ -27,7 +27,10 @@ EXPORTS
     wilton_Request_send_file
     wilton_Request_send_mustache
     wilton_Request_send_later
+    wilton_Request_retain_websocket
     wilton_ResponseWriter_set_metadata
     wilton_ResponseWriter_send
+    wilton_WebSocket_send
+    wilton_WebSocket_close
 
     wilton_module_init

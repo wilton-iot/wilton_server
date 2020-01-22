@@ -34,7 +34,7 @@ class response_writer::impl : public staticlib::pimpl::object::impl {
 
 public:
     impl(void* /* sl::pion::response_writer_ptr* */ writer) :
-    writer(std::move(*static_cast<sl::pion::response_writer_ptr*> (writer))) { }    
+    writer(std::move(*static_cast<sl::pion::response_writer_ptr*> (writer))) { }
 
     void set_metadata(response_writer&, serverconf::response_metadata rm) {
         writer->get_response().set_status_code(rm.statusCode);

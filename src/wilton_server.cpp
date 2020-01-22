@@ -40,6 +40,7 @@
 #include "request.hpp"
 #include "response_writer.hpp"
 #include "server.hpp"
+#include "websocket.hpp"
 
 struct wilton_Server {
 private:
@@ -76,6 +77,19 @@ public:
     delegate(std::move(delegate)) { }
 
     wilton::server::response_writer& impl() {
+        return delegate;
+    }
+};
+
+struct wilton_WebSocket {
+private:
+    wilton::server::websocket delegate;
+
+public:
+    wilton_WebSocket(wilton::server::websocket&& delegate) :
+    delegate(std::move(delegate)) { }
+
+    wilton::server::websocket& impl() {
         return delegate;
     }
 };
@@ -375,10 +389,15 @@ char* wilton_Request_send_later(
     }
 }
 
-char* wilton_Request_close_websocket(wilton_Request* request) /* noexcept */ {
-    if (nullptr == request) return wilton::support::alloc_copy(TRACEMSG("Null 'request' parameter specified"));
+char* wilton_Request_retain_websocket(
+        wilton_Request* request,
+        wilton_WebSocket** ws_out) /* noexcept */ {
+    if (nullptr == request) return wilton::support::alloc_copy(TRACEMSG("Null 'request' parameter specified"));    
+    if (nullptr == ws_out) return wilton::support::alloc_copy(TRACEMSG("Null 'ws_out' parameter specified"));
     try {
-        request->impl().close_websocket();
+        wilton::server::websocket ws = request->impl().retain_websocket();
+        wilton_WebSocket* ws_ptr = new wilton_WebSocket(std::move(ws));
+        *ws_out = ws_ptr;
         return nullptr;
     } catch (const std::exception& e) {
         return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));
@@ -420,5 +439,35 @@ char* wilton_ResponseWriter_send(
     } catch (const std::exception& e) {
         delete writer;
         return wilton::support::alloc_copy(TRACEMSG("WRITER_INVALIDATED\n" + e.what() + "\nException raised"));
-    }    
+    }
+}
+
+char* wilton_WebSocket_send(
+        wilton_WebSocket* ws,
+        const char* data,
+        int data_len) /* noexcept */ {
+    if (nullptr == ws) return wilton::support::alloc_copy(TRACEMSG("Null 'ws' parameter specified"));
+    if (nullptr == data) return wilton::support::alloc_copy(TRACEMSG("Null 'data' parameter specified"));
+    if (!sl::support::is_uint32(data_len)) return wilton::support::alloc_copy(TRACEMSG(
+            "Invalid 'data_len' parameter specified: [" + sl::support::to_string(data_len) + "]"));
+    try {
+        ws->impl().send({data, data_len});
+        delete ws;
+        return nullptr;
+    } catch (const std::exception& e) {
+        delete ws;
+        return wilton::support::alloc_copy(TRACEMSG("WEBSOCKET_INVALIDATED\n" + e.what() + "\nException raised"));
+    }
+}
+
+char* wilton_WebSocket_close(
+        wilton_WebSocket* ws) {
+    if (nullptr == ws) return wilton::support::alloc_copy(TRACEMSG("Null 'ws' parameter specified"));
+    try {
+        ws->impl().close();
+        delete ws;
+        return nullptr;
+    } catch (const std::exception& e) {
+        return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));
+    }
 }

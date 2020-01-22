@@ -82,7 +82,7 @@ class request::impl : public sl::pimpl::object::impl {
 
     // ws state
     sl::pion::websocket_ptr ws;
-    bool websocket = false;
+    bool websocket_active = false;
 
 public:
 
@@ -98,7 +98,7 @@ public:
     impl(void* /* sl::pion::websocket_ptr&& */ wsocket, bool response_allowed) :
     state(response_allowed ? request_state::created : request_state::committed),
     ws(std::move(*static_cast<sl::pion::websocket_ptr*>(wsocket))),
-    websocket(true) { }
+    websocket_active(true) { }
 
     serverconf::request_metadata get_request_metadata(request&) {
         auto& rq = get_request();
@@ -112,20 +112,20 @@ public:
     }
 
     const std::string& get_request_data(request&) {
-        if (websocket) throw support::exception(TRACEMSG(
+        if (websocket_active) throw support::exception(TRACEMSG(
                 "Cached data not supported with WebSocket"));
         return request_payload_handler::get_data_string(req);
     }
 
     support::buffer get_request_data_buffer(request&) {
-        if (!websocket) throw support::exception(TRACEMSG(
+        if (!websocket_active) throw support::exception(TRACEMSG(
                 "Buffer data not supported with HTTP"));
         auto src = ws->message_data();
         return support::make_source_buffer(src);
     }
 
     sl::json::value get_request_form_data(request&) {
-        if (websocket) throw support::exception(TRACEMSG(
+        if (websocket_active) throw support::exception(TRACEMSG(
                 "Form data not supported with WebSocket"));
         const std::string& data = request_payload_handler::get_data_string(req);
         auto dict = std::unordered_multimap<std::string, std::string, sl::pion::algorithm::ihash, sl::pion::algorithm::iequal_to>();
@@ -140,7 +140,7 @@ public:
     }
 
     const std::string& get_request_data_filename(request&) {
-        if (websocket) throw support::exception(TRACEMSG(
+        if (websocket_active) throw support::exception(TRACEMSG(
                 "Persistent request data not supported with WebSocket"));
         return request_payload_handler::get_data_filename(req);
     }
@@ -148,7 +148,7 @@ public:
     void set_response_metadata(request&, serverconf::response_metadata rm) {
         if (request_state::created != state.load(std::memory_order_acquire)) throw support::exception(TRACEMSG(
                 "Invalid request lifecycle operation meta, request is already committed"));
-        if (websocket) throw support::exception(TRACEMSG(
+        if (websocket_active) throw support::exception(TRACEMSG(
                 "Response metadata not supported with WebSocket"));
         resp->get_response().set_status_code(rm.statusCode);
         resp->get_response().set_status_message(rm.statusMessage);
@@ -162,7 +162,7 @@ public:
         if (!state.compare_exchange_strong(state_expected, request_state::committed,
                 std::memory_order_acq_rel, std::memory_order_relaxed)) throw support::exception(TRACEMSG(
                 "Invalid request lifecycle operation, request is already committed"));
-        if (!websocket) {
+        if (!websocket_active) {
             resp->write(data);
             resp->send(std::move(resp));
         } else {
@@ -172,7 +172,7 @@ public:
     }
 
     void send_file(request&, std::string file_path, std::function<void(bool)> finalizer) {
-        if (websocket) throw support::exception(TRACEMSG(
+        if (websocket_active) throw support::exception(TRACEMSG(
                 "Files sending not supported with WebSocket"));
         auto fd = sl::tinydir::file_source(file_path);
         auto state_expected = request_state::created;
@@ -185,7 +185,7 @@ public:
     }
 
     void send_mustache(request&, std::string mustache_file_path, sl::json::value json) {
-        if (websocket) throw support::exception(TRACEMSG(
+        if (websocket_active) throw support::exception(TRACEMSG(
                 "Mustache not supported with WebSocket"));
         auto state_expected = request_state::created;
         if (!state.compare_exchange_strong(state_expected, request_state::committed,
@@ -205,7 +205,7 @@ public:
     }
     
     response_writer send_later(request&) {
-        if (websocket) throw support::exception(TRACEMSG(
+        if (websocket_active) throw support::exception(TRACEMSG(
                 "Delayed responses not supported with WebSocket"));
         auto state_expected = request_state::created;
         if (!state.compare_exchange_strong(state_expected, request_state::committed,
@@ -215,11 +215,22 @@ public:
         return response_writer{static_cast<void*>(std::addressof(writer))};
     }
 
+    websocket retain_websocket(request&) {
+        if (!websocket_active) throw support::exception(TRACEMSG(
+                "WebSocket retainingn not supported with HTTP, use 'send_later' instead"));
+        auto state_expected = request_state::created;
+        if (!state.compare_exchange_strong(state_expected, request_state::committed,
+                std::memory_order_acq_rel, std::memory_order_relaxed)) throw support::exception(TRACEMSG(
+                "Invalid request lifecycle operation, request is already committed"));
+        sl::pion::websocket_ptr ws = std::move(this->ws);
+        return websocket{static_cast<void*>(std::addressof(ws))};
+    }
+
     void finish(request&) {
         auto state_expected = request_state::created;
         if (state.compare_exchange_strong(state_expected, request_state::committed,
                 std::memory_order_acq_rel, std::memory_order_relaxed)) {
-            if (!websocket) {
+            if (!websocket_active) {
                 resp->send(std::move(resp));
             } else {
                 ws->receive(std::move(ws));
@@ -228,23 +239,13 @@ public:
     }
 
     bool is_websocket(request&) {
-        return websocket;
-    }
-
-    void close_websocket(request&) {
-        if (!websocket) throw support::exception(TRACEMSG(
-                "Close connection operation not supported with HTTP"));
-        auto state_expected = request_state::created;
-        if (!state.compare_exchange_strong(state_expected, request_state::committed,
-                std::memory_order_acq_rel, std::memory_order_relaxed)) throw support::exception(TRACEMSG(
-                "Invalid request lifecycle operation, request is already committed"));
-        ws->close(std::move(ws));
+        return websocket_active;
     }
 
 private:
 
     sl::pion::http_request& get_request() {
-        if (!websocket) {
+        if (!websocket_active) {
             return *req;
         } else {
             return ws->get_request();
@@ -252,7 +253,7 @@ private:
     }
 
     sl::pion::tcp_connection& get_conn() {
-        if (!websocket) {
+        if (!websocket_active) {
             return *resp->get_connection();
         } else {
             return ws->get_connection();
@@ -323,9 +324,9 @@ PIMPL_FORWARD_METHOD(request, void, send_response, (sl::io::span<const char>), (
 PIMPL_FORWARD_METHOD(request, void, send_file, (std::string)(std::function<void(bool)>), (), support::exception)
 PIMPL_FORWARD_METHOD(request, void, send_mustache, (std::string)(sl::json::value), (), support::exception)
 PIMPL_FORWARD_METHOD(request, response_writer, send_later, (), (), support::exception)
+PIMPL_FORWARD_METHOD(request, websocket, retain_websocket, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, void, finish, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, bool, is_websocket, (), (), support::exception)
-PIMPL_FORWARD_METHOD(request, void, close_websocket, (), (), support::exception)
 
 } // namespace
 }

@@ -39,6 +39,9 @@ typedef struct wilton_Request wilton_Request;
 struct wilton_ResponseWriter;
 typedef struct wilton_ResponseWriter wilton_ResponseWriter;
 
+struct wilton_WebSocket;
+typedef struct wilton_WebSocket wilton_WebSocket;
+
 struct wilton_HttpPath;
 typedef struct wilton_HttpPath wilton_HttpPath;
 
@@ -192,8 +195,9 @@ char* wilton_Request_send_later(
         wilton_Request* request,
         wilton_ResponseWriter** writer_out);
 
-char* wilton_Request_close_websocket(
-        wilton_Request* request);
+char* wilton_Request_retain_websocket(
+        wilton_Request* request,
+        wilton_WebSocket** ws_out);
 
 char* wilton_ResponseWriter_set_metadata(
         wilton_ResponseWriter* writer,
@@ -204,6 +208,14 @@ char* wilton_ResponseWriter_send(
         wilton_ResponseWriter* writer,
         const char* data,
         int data_len);
+
+char* wilton_WebSocket_send(
+        wilton_WebSocket* ws,
+        const char* data,
+        int data_len);
+
+char* wilton_WebSocket_close(
+        wilton_WebSocket* ws);
 
 #ifdef __cplusplus
 }

@@ -40,6 +40,7 @@
 #include "conf/request_metadata.hpp"
 #include "mustache_cache.hpp"
 #include "response_writer.hpp"
+#include "websocket.hpp"
 
 namespace wilton {
 namespace server {
@@ -77,15 +78,15 @@ public:
     void send_mustache(std::string mustache_file_path, sl::json::value json);
     
     response_writer send_later();
-    
+
     void finish();
 
     bool is_websocket();
 
-    void close_websocket();
-    
+    websocket retain_websocket();
+
     // private api
-    
+
     request(void* /* sl::pion::http_request_ptr&& */ req, 
             void* /* sl::pion::http_response_writer_ptr&& */ resp,
             mustache_cache& mustache_templates,

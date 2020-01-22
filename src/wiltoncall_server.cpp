@@ -148,6 +148,15 @@ std::shared_ptr<support::unique_handle_registry<wilton_ResponseWriter>> response
     return registry;
 }
 
+// initialized from wilton_module_init
+std::shared_ptr<support::unique_handle_registry<wilton_WebSocket>> websocket_registry() {
+    static auto registry = std::make_shared<support::unique_handle_registry<wilton_WebSocket>>(
+            [](wilton_WebSocket* websocket) STATICLIB_NOEXCEPT {
+                wilton_WebSocket_close(websocket);
+            });
+    return registry;
+}
+
 std::vector<http_view> extract_and_delete_views(sl::json::value& conf) {
     std::vector<sl::json::field>& fields = conf.as_object_or_throw(TRACEMSG(
             "Invalid configuration object specified: invalid type," +
@@ -639,7 +648,7 @@ support::buffer request_send_later(sl::io::span<const char> data) {
     });
 }
 
-support::buffer request_close_websocket(sl::io::span<const char> data) {
+support::buffer request_retain_websocket(sl::io::span<const char> data) {
     // json parse
     auto json = sl::json::load(data);
     int64_t handle = -1;
@@ -659,10 +668,15 @@ support::buffer request_close_websocket(sl::io::span<const char> data) {
     if (nullptr == request) throw support::exception(TRACEMSG(
             "Invalid 'requestHandle' parameter specified"));
     // call wilton
-    char* err = wilton_Request_close_websocket(request);
+    wilton_WebSocket* ws;
+    char* err = wilton_Request_retain_websocket(request, std::addressof(ws));
     rreg->put(request);
     if (nullptr != err) support::throw_wilton_error(err, TRACEMSG(err));
-    return support::make_null_buffer();
+    auto wreg = websocket_registry();
+    int64_t whandle = wreg->put(ws);
+    return support::make_json_buffer({
+        { "webSocketHandle", whandle}
+    });
 }
 
 support::buffer request_set_metadata_with_response_writer(sl::io::span<const char> data) {
@@ -725,10 +739,65 @@ support::buffer request_send_with_response_writer(sl::io::span<const char> data)
     return support::make_null_buffer();
 }
 
+support::buffer request_send_with_websocket(sl::io::span<const char> data) {
+    // json parse
+    auto json = sl::json::load(data);
+    int64_t handle = -1;
+    auto rdata = std::ref(sl::utils::empty_string());
+    for (const sl::json::field& fi : json.as_object()) {
+        auto& name = fi.name();
+        if ("webSocketHandle" == name) {
+            handle = fi.as_int64_or_throw(name);
+        } else if ("data" == name) {
+            rdata = fi.as_string();
+        } else {
+            throw support::exception(TRACEMSG("Unknown data field: [" + name + "]"));
+        }
+    }
+    if (-1 == handle) throw support::exception(TRACEMSG(
+            "Required parameter 'webSocketHandle' not specified"));
+    const std::string& request_data = rdata.get().empty() ? "{}" : rdata.get();
+    // get handle, note: won't be put back - one-off operation
+    auto wreg = websocket_registry();
+    wilton_WebSocket* ws = wreg->remove(handle);
+    if (nullptr == ws) throw support::exception(TRACEMSG(
+            "Invalid 'webSocketHandle' parameter specified"));
+    // call wilton
+    char* err = wilton_WebSocket_send(ws, request_data.c_str(), static_cast<int>(request_data.length()));
+    if (nullptr != err) support::throw_wilton_error(err, TRACEMSG(err));
+    return support::make_null_buffer();
+}
+
+support::buffer request_close_websocket(sl::io::span<const char> data) {
+    // json parse
+    auto json = sl::json::load(data);
+    int64_t handle = -1;
+    for (const sl::json::field& fi : json.as_object()) {
+        auto& name = fi.name();
+        if ("webSocketHandle" == name) {
+            handle = fi.as_int64_or_throw(name);
+        } else {
+            throw support::exception(TRACEMSG("Unknown data field: [" + name + "]"));
+        }
+    }
+    if (-1 == handle) throw support::exception(TRACEMSG(
+            "Required parameter 'webSocketHandle' not specified"));
+    // get handle, note: won't be put back - one-off operation
+    auto wreg = websocket_registry();
+    wilton_WebSocket* ws = wreg->remove(handle);
+    if (nullptr == ws) throw support::exception(TRACEMSG(
+            "Invalid 'webSocketHandle' parameter specified"));
+    // call wilton
+    char* err = wilton_WebSocket_close(ws);
+    if (nullptr != err) support::throw_wilton_error(err, TRACEMSG(err));
+    return support::make_null_buffer();
+}
+
 void initialize() {
     server_registry();
     request_registry();
     response_writer_registry();
+    websocket_registry();
 }
 
 } // namespace
@@ -750,9 +819,11 @@ extern "C" char* wilton_module_init() {
         wilton::support::register_wiltoncall("request_send_temp_file", wilton::server::request_send_temp_file);
         wilton::support::register_wiltoncall("request_send_mustache", wilton::server::request_send_mustache);
         wilton::support::register_wiltoncall("request_send_later", wilton::server::request_send_later);
-        wilton::support::register_wiltoncall("request_close_websocket", wilton::server::request_close_websocket);
         wilton::support::register_wiltoncall("request_set_metadata_with_response_writer", wilton::server::request_set_metadata_with_response_writer);
         wilton::support::register_wiltoncall("request_send_with_response_writer", wilton::server::request_send_with_response_writer);
+        wilton::support::register_wiltoncall("request_retain_websocket", wilton::server::request_retain_websocket);
+        wilton::support::register_wiltoncall("request_send_with_websocket", wilton::server::request_send_with_websocket);
+        wilton::support::register_wiltoncall("request_close_websocket", wilton::server::request_close_websocket);
         return nullptr;
     } catch (const std::exception& e) {
         return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));
