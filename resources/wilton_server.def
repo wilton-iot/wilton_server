@@ -18,6 +18,7 @@ EXPORTS
 
     wilton_Server_create
     wilton_Server_stop
+    wilton_Server_get_tcp_port
 
     wilton_Request_get_request_metadata
     wilton_Request_get_request_data

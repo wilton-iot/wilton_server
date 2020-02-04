@@ -42,7 +42,7 @@ namespace wilton {
 namespace serverconf {
 
 class server_config {
-public:    
+public:
     uint32_t numberOfThreads = 2;
     uint16_t tcpPort = 8080;
     std::string ipAddress = "0.0.0.0";
@@ -87,7 +87,7 @@ public:
             if ("numberOfThreads" == name) {
                 this->numberOfThreads = fi.as_uint16_positive_or_throw(name);
             } else if ("tcpPort" == name) {
-                this->tcpPort = fi.as_uint16_positive_or_throw(name);
+                this->tcpPort = fi.as_uint16_or_throw(name);
             } else if ("ipAddress" == name) {
                 this->ipAddress = fi.as_string_nonempty_or_throw(name);
             } else if ("readTimeoutMillis" == name) {
@@ -110,7 +110,7 @@ public:
             }
         }
     }
-    
+
     sl::json::value to_json() const {
         return {
             {"numberOfThreads", numberOfThreads},

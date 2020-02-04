@@ -156,6 +156,10 @@ public:
         server_ptr->broadcast_websocket(path, message, sl::websocket::frame_type::text, dest_ids);
     }
 
+    uint16_t get_tcp_port(server&) {
+        return server_ptr->get_tcp_endpoint().port();
+    }
+
 private:
     static std::function<std::string(std::size_t, asio::ssl::context::password_purpose)> create_pwd_cb(const std::string& password) {
         return [password](std::size_t, asio::ssl::context::password_purpose) {
@@ -243,6 +247,7 @@ PIMPL_FORWARD_CONSTRUCTOR(server, (serverconf::server_config)(std::vector<sl::su
 PIMPL_FORWARD_METHOD(server, void, stop, (), (), support::exception)
 PIMPL_FORWARD_METHOD(server, void, broadcast_websocket, (const std::string&)
         (sl::io::span<const char>)(const std::set<std::string>&), (), support::exception)
+PIMPL_FORWARD_METHOD(server, uint16_t, get_tcp_port, (), (), support::exception)
 
 } // namespace
 }

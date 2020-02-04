@@ -111,6 +111,10 @@ char* wilton_Server_broadcast_websocket(
         const char* dest_ids_list_json,
         int dest_ids_list_json_len);
 
+char* wilton_Server_get_tcp_port(
+        wilton_Server* server,
+        int* port_out);
+
 /*
 // Duplicates in raw headers are handled in the following ways, depending on the header name:
 // Duplicates of age, authorization, content-length, content-type, etag, expires, 

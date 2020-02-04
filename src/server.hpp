@@ -56,6 +56,8 @@ public:
  
     void broadcast_websocket(const std::string& path, sl::io::span<const char> message,
             const std::set<std::string>& dest_ids);
+
+    uint16_t get_tcp_port();
 };
 
 } // namespace

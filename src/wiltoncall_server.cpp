@@ -362,6 +362,38 @@ support::buffer server_broadcast_websocket(sl::io::span<const char> data) {
     return support::make_null_buffer();
 }
 
+support::buffer get_tcp_port(sl::io::span<const char> data) {
+    // json parse
+    auto json = sl::json::load(data);
+    int64_t handle = -1;
+    for (const sl::json::field& fi : json.as_object()) {
+        auto& name = fi.name();
+        if ("serverHandle" == name) {
+            handle = fi.as_int64_or_throw(name);
+        } else {
+            throw support::exception(TRACEMSG("Unknown data field: [" + name + "]"));
+        }
+    }
+    if (-1 == handle) throw support::exception(TRACEMSG(
+            "Required parameter 'serverHandle' not specified"));
+    // get handle
+    auto sreg = server_registry();
+    auto pa = sreg->remove(handle);
+    if (nullptr == pa->first) throw support::exception(TRACEMSG(
+            "Invalid 'serverHandle' parameter specified"));
+    // call wilton
+    int port = -1;
+    char* err = wilton_Server_get_tcp_port(pa->first, std::addressof(port));
+    sreg->put(pa);
+    if (nullptr != err) {
+        sreg->put(pa);
+        support::throw_wilton_error(err, TRACEMSG(err));
+    }
+    return support::make_json_buffer({
+        { "tcpPort", port}
+    });
+}
+
 support::buffer request_get_metadata(sl::io::span<const char> data) {
     // json parse
     auto json = sl::json::load(data);
@@ -810,6 +842,7 @@ extern "C" char* wilton_module_init() {
         wilton::support::register_wiltoncall("server_create", wilton::server::server_create);
         wilton::support::register_wiltoncall("server_stop", wilton::server::server_stop);
         wilton::support::register_wiltoncall("server_broadcast_websocket", wilton::server::server_broadcast_websocket);
+        wilton::support::register_wiltoncall("server_get_tcp_port", wilton::server::get_tcp_port);
         wilton::support::register_wiltoncall("request_get_metadata", wilton::server::request_get_metadata);
         wilton::support::register_wiltoncall("request_get_data", wilton::server::request_get_data);
         wilton::support::register_wiltoncall("request_get_form_data", wilton::server::request_get_form_data);

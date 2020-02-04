@@ -218,7 +218,17 @@ char* wilton_Server_broadcast_websocket(wilton_Server* server, const char* path,
     } catch (const std::exception& e) {
         return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));
     }
+}
 
+char* wilton_Server_get_tcp_port(wilton_Server* server, int* port_out) {
+    if (nullptr == server) return wilton::support::alloc_copy(TRACEMSG("Null 'server' parameter specified"));
+    if (nullptr == port_out) return wilton::support::alloc_copy(TRACEMSG("Null 'port_out' parameter specified"));
+    try {
+        *port_out = static_cast<int>(server->impl().get_tcp_port());
+        return nullptr;
+    } catch (const std::exception& e) {
+        return wilton::support::alloc_copy(TRACEMSG(e.what() + "\nException raised"));
+    }
 }
 
 char* wilton_Request_get_request_metadata(wilton_Request* request, char** metadata_json_out,
