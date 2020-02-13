@@ -31,7 +31,8 @@
 #include "wilton/support/exception.hpp"
 
 namespace wilton {
-namespace serverconf {
+namespace server {
+namespace conf {
 
 class ssl_config {
 public:
@@ -94,6 +95,7 @@ public:
 };
 
 } // namespace
+}
 }
 
 #endif /* WILTON_SERVER_CONF_SSL_CONFIG_HPP */

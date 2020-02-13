@@ -36,13 +36,14 @@
 #include "conf/header.hpp"
 
 namespace wilton {
-namespace serverconf {
+namespace server {
+namespace conf {
 
 class response_metadata {
 public:
     uint16_t statusCode = 200;
     std::string statusMessage = "OK";
-    std::vector<serverconf::header> headers;
+    std::vector<server::conf::header> headers;
 
     response_metadata(const response_metadata&) = delete;
 
@@ -79,7 +80,7 @@ public:
     }
 
     sl::json::value to_json() const {
-        auto ha = sl::ranges::transform(headers, [](const serverconf::header & el) {
+        auto ha = sl::ranges::transform(headers, [](const server::conf::header & el) {
             return el.to_json();
         });
         std::vector<sl::json::field> hfields = sl::ranges::emplace_to_vector(std::move(ha));
@@ -93,6 +94,7 @@ public:
 };
 
 } // namespace
+}
 }
 
 #endif /* WILTON_SERVER_CONF_RESPONSE_METADATA_HPP */

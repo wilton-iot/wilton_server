@@ -39,18 +39,18 @@
 #include "http_path.hpp"
 #include "request.hpp"
 #include "response_writer.hpp"
-#include "server.hpp"
+#include "sserver.hpp"
 #include "websocket.hpp"
 
 struct wilton_Server {
 private:
-    wilton::server::server delegate;
+    wilton::server::sserver delegate;
 
 public:
-    wilton_Server(wilton::server::server&& delegate) :
+    wilton_Server(wilton::server::sserver&& delegate) :
     delegate(std::move(delegate)) { }
 
-    wilton::server::server& impl() {
+    wilton::server::sserver& impl() {
         return delegate;
     }
 };
@@ -171,7 +171,7 @@ char* wilton_Server_create /* noexcept */ (wilton_Server** server_out, const cha
         sl::json::value json = sl::json::load({conf_json, conf_json_len});
         uint16_t paths_len_u16 = static_cast<uint16_t>(paths_len);
         auto pathsvec = wrap_paths(paths, paths_len_u16);
-        wilton::server::server server{std::move(json), std::move(pathsvec)};
+        wilton::server::sserver server{std::move(json), std::move(pathsvec)};
         wilton_Server* server_ptr = new wilton_Server(std::move(server));
         *server_out = server_ptr;
         return nullptr;
@@ -309,7 +309,7 @@ char* wilton_Request_set_response_metadata(wilton_Request* request,
             "Invalid 'metadata_json_len' parameter specified: [" + sl::support::to_string(metadata_json_len) + "]"));
     try {
         sl::json::value json = sl::json::load({metadata_json, metadata_json_len});
-        wilton::serverconf::response_metadata rm{json};
+        wilton::server::conf::response_metadata rm{json};
         request->impl().set_response_metadata(std::move(rm));
         return nullptr;
     } catch (const std::exception& e) {
@@ -425,7 +425,7 @@ char* wilton_ResponseWriter_set_metadata(
             "Invalid 'metadata_json_len' parameter specified: [" + sl::support::to_string(metadata_json_len) + "]"));
     try {
         sl::json::value json = sl::json::load({metadata_json, metadata_json_len});
-        wilton::serverconf::response_metadata rm{json};
+        wilton::server::conf::response_metadata rm{json};
         writer->impl().set_metadata(std::move(rm));
         return nullptr;
     } catch (const std::exception& e) {

@@ -37,7 +37,8 @@
 #include "conf/header.hpp"
 
 namespace wilton {
-namespace serverconf {
+namespace server {
+namespace conf {
 
 class request_metadata {
     std::string httpVersion;
@@ -46,7 +47,7 @@ class request_metadata {
     std::string pathname;
     std::string query;
     std::vector<std::pair<std::string, std::string>> queries;
-    std::vector<serverconf::header> headers;
+    std::vector<server::conf::header> headers;
 
 public:
     request_metadata(const request_metadata&) = delete;
@@ -77,7 +78,7 @@ public:
             const std::string& method, const std::string& pathname,
             const std::string& query, 
             std::vector<std::pair<std::string, std::string>> queries,
-            std::vector<serverconf::header> headers) :
+            std::vector<server::conf::header> headers) :
     httpVersion(httpVersion.data(), httpVersion.length()),
     protocol(protocol.data(), protocol.length()),
     method(method.data(), method.length()),
@@ -87,7 +88,7 @@ public:
     headers(std::move(headers)) { }
         
     sl::json::value to_json() const {
-        auto ha = sl::ranges::transform(headers, [](const serverconf::header& el) {
+        auto ha = sl::ranges::transform(headers, [](const server::conf::header& el) {
             return el.to_json();
         });
         std::vector<sl::json::field> hfields = sl::ranges::emplace_to_vector(std::move(ha));
@@ -119,6 +120,7 @@ private:
 
 
 } // namespace
+}
 }
 
 #endif /* WILTON_SERVER_CONF_REQUEST_METADATA_HPP */

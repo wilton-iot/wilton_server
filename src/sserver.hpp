@@ -36,7 +36,7 @@
 namespace wilton {
 namespace server {
 
-class server : public sl::pimpl::object {
+class sserver : public sl::pimpl::object {
 protected:
     /**
      * implementation class
@@ -48,9 +48,9 @@ public:
      * 
      * @param pimpl impl object
      */
-    PIMPL_CONSTRUCTOR(server)
+    PIMPL_CONSTRUCTOR(sserver)
             
-    server(serverconf::server_config conf, std::vector<sl::support::observer_ptr<http_path>> paths);
+    sserver(server::conf::server_config conf, std::vector<sl::support::observer_ptr<http_path>> paths);
     
     void stop();
  

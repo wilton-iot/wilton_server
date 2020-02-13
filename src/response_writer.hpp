@@ -50,7 +50,7 @@ public:
      */
     PIMPL_CONSTRUCTOR(response_writer)
 
-    void set_metadata(serverconf::response_metadata rm);
+    void set_metadata(server::conf::response_metadata rm);
     
     void send(sl::io::span<const char> data);
   

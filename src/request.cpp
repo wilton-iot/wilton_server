@@ -48,7 +48,6 @@
 #include "conf/request_metadata.hpp"
 #include "response_stream_sender.hpp"
 #include "request_payload_handler.hpp"
-#include "server.hpp"
 
 namespace wilton {
 namespace server {
@@ -100,14 +99,14 @@ public:
     ws(std::move(*static_cast<sl::pion::websocket_ptr*>(wsocket))),
     websocket_active(true) { }
 
-    serverconf::request_metadata get_request_metadata(request&) {
+    server::conf::request_metadata get_request_metadata(request&) {
         auto& rq = get_request();
         std::string http_ver = sl::support::to_string(rq.get_version_major()) +
                 "." + sl::support::to_string(rq.get_version_minor());
         auto headers = get_request_headers(rq);
         auto queries = get_queries(rq);
         std::string protocol = get_conn().get_ssl_flag() ? "https" : "http";
-        return serverconf::request_metadata(http_ver, protocol, rq.get_method(), rq.get_resource(),
+        return server::conf::request_metadata(http_ver, protocol, rq.get_method(), rq.get_resource(),
                 rq.get_query_string(), std::move(queries), std::move(headers));
     }
 
@@ -145,14 +144,14 @@ public:
         return request_payload_handler::get_data_filename(req);
     }
 
-    void set_response_metadata(request&, serverconf::response_metadata rm) {
+    void set_response_metadata(request&, server::conf::response_metadata rm) {
         if (request_state::created != state.load(std::memory_order_acquire)) throw support::exception(TRACEMSG(
                 "Invalid request lifecycle operation meta, request is already committed"));
         if (websocket_active) throw support::exception(TRACEMSG(
                 "Response metadata not supported with WebSocket"));
         resp->get_response().set_status_code(rm.statusCode);
         resp->get_response().set_status_message(rm.statusMessage);
-        for (const serverconf::header& ha : rm.headers) {
+        for (const server::conf::header& ha : rm.headers) {
             resp->get_response().change_header(ha.name, ha.value);
         }
     }
@@ -266,10 +265,10 @@ private:
     // from, host, if-modified-since, if-unmodified-since, last-modified, location, 
     // max-forwards, proxy-authorization, referer, retry-after, or user-agent are discarded.
     // For all other headers, the values are joined together with ', '.
-    static std::vector<serverconf::header> get_request_headers(sl::pion::http_request& req) {
-        std::unordered_map<std::string, serverconf::header> map{};
+    static std::vector<server::conf::header> get_request_headers(sl::pion::http_request& req) {
+        std::unordered_map<std::string, server::conf::header> map{};
         for (const auto& en : req.get_headers()) {
-            auto ha = serverconf::header(en.first, en.second);
+            auto ha = server::conf::header(en.first, en.second);
             std::string key = en.first;
             std::transform(key.begin(), key.end(), key.begin(), ::tolower);
             auto inserted = map.emplace(key, std::move(ha));
@@ -277,11 +276,11 @@ private:
                 append_with_comma(inserted.first->second.value, en.second);
             }
         }
-        std::vector<serverconf::header> res{};
+        std::vector<server::conf::header> res{};
         for (auto& en : map) {
             res.emplace_back(std::move(en.second));
         }
-        std::sort(res.begin(), res.end(), [](const serverconf::header& el1, const serverconf::header & el2) {
+        std::sort(res.begin(), res.end(), [](const server::conf::header& el1, const server::conf::header & el2) {
             return el1.name < el2.name;
         });
         return res;
@@ -314,12 +313,12 @@ private:
 };
 PIMPL_FORWARD_CONSTRUCTOR(request, (void*)(void*)(mustache_cache&)(partmap_type), (), support::exception)
 PIMPL_FORWARD_CONSTRUCTOR(request, (void*)(bool), (), support::exception)
-PIMPL_FORWARD_METHOD(request, serverconf::request_metadata, get_request_metadata, (), (), support::exception)
+PIMPL_FORWARD_METHOD(request, server::conf::request_metadata, get_request_metadata, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, const std::string&, get_request_data, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, support::buffer, get_request_data_buffer, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, sl::json::value, get_request_form_data, (), (), support::exception)
 PIMPL_FORWARD_METHOD(request, const std::string&, get_request_data_filename, (), (), support::exception)
-PIMPL_FORWARD_METHOD(request, void, set_response_metadata, (serverconf::response_metadata), (), support::exception)
+PIMPL_FORWARD_METHOD(request, void, set_response_metadata, (server::conf::response_metadata), (), support::exception)
 PIMPL_FORWARD_METHOD(request, void, send_response, (sl::io::span<const char>), (), support::exception)
 PIMPL_FORWARD_METHOD(request, void, send_file, (std::string)(std::function<void(bool)>), (), support::exception)
 PIMPL_FORWARD_METHOD(request, void, send_mustache, (std::string)(sl::json::value), (), support::exception)

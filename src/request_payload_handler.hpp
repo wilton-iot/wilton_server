@@ -52,7 +52,7 @@ class request_payload_handler {
 
     class payload_data {
         friend class request_payload_handler;
-        serverconf::request_payload_config conf;
+        server::conf::request_payload_config conf;
         uint64_t counter = 0;
         std::string buffer = "";
         std::string filename;
@@ -61,7 +61,7 @@ class request_payload_handler {
         std::unique_ptr<sl::utils::random_string_generator> rng;
 
     public:
-        payload_data(const serverconf::request_payload_config& conf) :
+        payload_data(const server::conf::request_payload_config& conf) :
         conf(conf.clone()) { }
 
         sl::utils::random_string_generator& randomgen() {
@@ -105,7 +105,7 @@ public:
         }
     }
     
-    request_payload_handler(const serverconf::request_payload_config& conf) : 
+    request_payload_handler(const server::conf::request_payload_config& conf) : 
     data(std::make_shared<payload_data>(conf)) { }
 
     static const std::string& get_data_string(sl::pion::http_request_ptr& request) {

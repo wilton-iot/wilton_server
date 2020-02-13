@@ -31,7 +31,8 @@
 #include "wilton/support/exception.hpp"
 
 namespace wilton {
-namespace serverconf {
+namespace server {
+namespace conf {
 
 class mustache_config {
 public:
@@ -83,6 +84,7 @@ public:
 };
 
 } // namespace
+}
 }
 
 #endif /* WILTON_SERVER_CONF_MUSTACHE_CONFIG_HPP */

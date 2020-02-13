@@ -32,7 +32,8 @@
 #include "staticlib/json.hpp"
 
 namespace wilton {
-namespace serverconf {
+namespace server {
+namespace conf {
 
 class request_payload_config {
 public:
@@ -93,6 +94,7 @@ public:
 };
 
 } // namespace
+}
 }
 
 #endif /* WILTON_SERVER_CONF_REQUEST_PAYLOAD_CONFIG_HPP */

@@ -59,7 +59,7 @@ public:
      */
     PIMPL_CONSTRUCTOR(request)
     
-    serverconf::request_metadata get_request_metadata();
+    server::conf::request_metadata get_request_metadata();
     
     const std::string& get_request_data();
 
@@ -69,7 +69,7 @@ public:
     
     const std::string& get_request_data_filename();
     
-    void set_response_metadata(serverconf::response_metadata rm);
+    void set_response_metadata(server::conf::response_metadata rm);
     
     void send_response(sl::io::span<const char> data);
     

@@ -39,7 +39,8 @@
 #include "conf/ssl_config.hpp"
 
 namespace wilton {
-namespace serverconf {
+namespace server {
+namespace conf {
 
 class server_config {
 public:
@@ -96,11 +97,11 @@ public:
                 this->ssl = ssl_config(fi.val());
             } else if ("documentRoots" == name) {
                 for (const sl::json::value& lo : fi.as_array_or_throw(name)) {
-                    auto jd = serverconf::document_root(lo);
+                    auto jd = server::conf::document_root(lo);
                     this->documentRoots.emplace_back(std::move(jd));
                 }
             } else if ("requestPayload" == name) {
-                this->requestPayload = serverconf::request_payload_config(fi.val());
+                this->requestPayload = server::conf::request_payload_config(fi.val());
             } else if ("mustache" == name) {
                 this->mustache = mustache_config(fi.val());
             } else if ("rootRedirectLocation" == name) {
@@ -119,7 +120,7 @@ public:
             {"readTimeoutMillis", readTimeoutMillis},
             {"ssl", ssl.to_json()},
             {"documentRoots", [this]() {
-                auto drs = sl::ranges::transform(documentRoots, [](const serverconf::document_root& el) {
+                auto drs = sl::ranges::transform(documentRoots, [](const server::conf::document_root& el) {
                     return el.to_json();
                 });
                 return drs.to_vector();
@@ -132,6 +133,7 @@ public:
 };
 
 } // namespace
+}
 }
 
 #endif /* WILTON_SERVER_CONF_SERVER_CONFIG_HPP */

@@ -21,7 +21,7 @@
  * Created on June 2, 2016, 5:33 PM
  */
 
-#include "server.hpp"
+#include "sserver.hpp"
 
 #include <functional>
 #include <memory>
@@ -42,11 +42,12 @@
 #include "wilton/support/exception.hpp"
 
 #include "conf/server_config.hpp"
-#include "file_handler.hpp"
+#include "handlers/file_handler.hpp"
+#include "handlers/loader_handler.hpp"
+#include "handlers/zip_handler.hpp"
 #include "mustache_cache.hpp"
 #include "request.hpp"
 #include "request_payload_handler.hpp"
-#include "zip_handler.hpp"
 
 namespace wilton {
 namespace server {
@@ -72,13 +73,13 @@ void handle_not_found_request(sl::pion::http_request_ptr req, sl::pion::response
 
 } // namespace
 
-class server::impl : public sl::pimpl::object::impl {
+class sserver::impl : public sl::pimpl::object::impl {
     mustache_cache mustache_templates;
     std::map<std::string, std::string> mustache_partials;
     std::unique_ptr<sl::pion::http_server> server_ptr;
 
 public:
-    impl(serverconf::server_config conf, std::vector<sl::support::observer_ptr<http_path>> paths) :
+    impl(server::conf::server_config conf, std::vector<sl::support::observer_ptr<http_path>> paths) :
     mustache_templates(),
     mustache_partials(load_partials(conf.mustache)),
     server_ptr(std::unique_ptr<sl::pion::http_server>(new sl::pion::http_server(
@@ -90,7 +91,7 @@ public:
             create_pwd_cb(conf.ssl.keyPassword),
             conf.ssl.verifyFile,
             create_verifier_cb(conf.ssl.verifySubjectSubstr)))) {
-        auto conf_ptr = std::make_shared<serverconf::request_payload_config>(conf.requestPayload.clone());
+        auto conf_ptr = std::make_shared<server::conf::request_payload_config>(conf.requestPayload.clone());
         for (auto& pa : paths) {
             auto ha = pa->handler; // copy
             if (sl::utils::starts_with(pa->method, "WS")) {
@@ -133,10 +134,12 @@ public:
         for (const auto& dr : conf.documentRoots) {
             if (dr.dirPath.length() > 0) {
                 check_dir_path(dr.dirPath);
-                server_ptr->add_handler("GET", dr.resource, file_handler(dr));
+                server_ptr->add_handler("GET", dr.resource, handlers::file_handler(dr));
             } else if (dr.zipPath.length() > 0) {
                 check_zip_path(dr.zipPath);
-                server_ptr->add_handler("GET", dr.resource, zip_handler(dr));
+                server_ptr->add_handler("GET", dr.resource, handlers::zip_handler(dr));
+            } else if (dr.useResourceLoader) {
+                server_ptr->add_handler("GET", dr.resource, handlers::loader_handler(dr));
             } else throw support::exception(TRACEMSG(
                     "Invalid 'documentRoot': [" + dr.to_json().dumps() + "]"));
         }
@@ -147,16 +150,16 @@ public:
         server_ptr->start();
     }
 
-    void stop(server&) {
+    void stop(sserver&) {
         server_ptr->stop();
     }
 
-    void broadcast_websocket(server&, const std::string& path, sl::io::span<const char> message,
+    void broadcast_websocket(sserver&, const std::string& path, sl::io::span<const char> message,
             const std::set<std::string>& dest_ids) {
         server_ptr->broadcast_websocket(path, message, sl::websocket::frame_type::text, dest_ids);
     }
 
-    uint16_t get_tcp_port(server&) {
+    uint16_t get_tcp_port(sserver&) {
         return server_ptr->get_tcp_endpoint().port();
     }
 
@@ -207,7 +210,7 @@ private:
         };
     }
     
-    static std::map<std::string, std::string> load_partials(const serverconf::mustache_config& cf) {
+    static std::map<std::string, std::string> load_partials(const server::conf::mustache_config& cf) {
         std::map<std::string, std::string> res;
         for (const std::string& dirpath : cf.partialsDirs) {
             for (const sl::tinydir::path& tf : sl::tinydir::list_directory(dirpath)) {
@@ -243,11 +246,11 @@ private:
     }
     
 };
-PIMPL_FORWARD_CONSTRUCTOR(server, (serverconf::server_config)(std::vector<sl::support::observer_ptr<http_path>>), (), support::exception)
-PIMPL_FORWARD_METHOD(server, void, stop, (), (), support::exception)
-PIMPL_FORWARD_METHOD(server, void, broadcast_websocket, (const std::string&)
+PIMPL_FORWARD_CONSTRUCTOR(sserver, (server::conf::server_config)(std::vector<sl::support::observer_ptr<http_path>>), (), support::exception)
+PIMPL_FORWARD_METHOD(sserver, void, stop, (), (), support::exception)
+PIMPL_FORWARD_METHOD(sserver, void, broadcast_websocket, (const std::string&)
         (sl::io::span<const char>)(const std::set<std::string>&), (), support::exception)
-PIMPL_FORWARD_METHOD(server, uint16_t, get_tcp_port, (), (), support::exception)
+PIMPL_FORWARD_METHOD(sserver, uint16_t, get_tcp_port, (), (), support::exception)
 
 } // namespace
 }

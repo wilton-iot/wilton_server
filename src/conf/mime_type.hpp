@@ -32,7 +32,8 @@
 #include "staticlib/json.hpp"
 
 namespace wilton {
-namespace serverconf {
+namespace server {
+namespace conf {
 
 class mime_type {
 public:
@@ -90,6 +91,7 @@ public:
 };
 
 } // namespace
+}
 }
 
 #endif /* WILTON_SERVER_CONF_MIME_TYPE_HPP */

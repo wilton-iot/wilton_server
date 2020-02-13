@@ -37,7 +37,8 @@
 #include "conf/mime_type.hpp"
 
 namespace wilton {
-namespace serverconf {
+namespace server {
+namespace conf {
 
 class document_root {
 public:
@@ -45,6 +46,8 @@ public:
     std::string dirPath = "";
     std::string zipPath = "";
     std::string zipInnerPrefix = "";
+    bool useResourceLoader = false;
+    std::string resourceLoaderPrefix = "";
     uint32_t cacheMaxAgeSeconds = 604800;
     std::vector<mime_type> mimeTypes = default_mimes();
     
@@ -57,14 +60,21 @@ public:
     dirPath(std::move(other.dirPath)),
     zipPath(std::move(other.zipPath)),
     zipInnerPrefix(std::move(other.zipInnerPrefix)),
+    useResourceLoader(other.useResourceLoader),
+    resourceLoaderPrefix(std::move(other.resourceLoaderPrefix)),
     cacheMaxAgeSeconds(other.cacheMaxAgeSeconds),
-    mimeTypes(std::move(other.mimeTypes)) { }
+    mimeTypes(std::move(other.mimeTypes)) {
+        other.useResourceLoader = false;
+    }
 
     document_root& operator=(document_root&& other) {
         this->resource = std::move(other.resource);
         this->dirPath = std::move(other.dirPath);
         this->zipPath = std::move(other.zipPath);
         this->zipInnerPrefix = std::move(other.zipInnerPrefix);
+        this->useResourceLoader = std::move(other.useResourceLoader);
+        other.useResourceLoader = false;
+        this->resourceLoaderPrefix = std::move(other.resourceLoaderPrefix);
         this->cacheMaxAgeSeconds = other.cacheMaxAgeSeconds;
         this->mimeTypes = std::move(other.mimeTypes);
         return *this;
@@ -74,11 +84,14 @@ public:
     
     document_root(const std::string& resource, const std::string& dirPath, 
             const std::string& zipPath, const std::string& zipInnerPrefix,
+            bool useResourceLoader, const std::string& resourceLoaderPrefix,
             uint32_t cacheMaxAgeSeconds, const std::vector<mime_type>& mimeTypes) :
     resource(resource.data(), resource.length()), 
     dirPath(dirPath.data(), dirPath.length()), 
     zipPath(zipPath.data(), zipPath.length()), 
     zipInnerPrefix(zipInnerPrefix.data(), zipInnerPrefix.length()), 
+    useResourceLoader(useResourceLoader),
+    resourceLoaderPrefix(resourceLoaderPrefix.data(), resourceLoaderPrefix.length()), 
     cacheMaxAgeSeconds(cacheMaxAgeSeconds), 
     mimeTypes(mimes_copy(mimeTypes)) { }
 
@@ -93,11 +106,15 @@ public:
                 this->zipPath = fi.as_string_nonempty_or_throw(name);
             } else if ("zipInnerPrefix" == name) {
                 this->zipInnerPrefix = fi.as_string_nonempty_or_throw(name);
+            } else if ("useResourceLoader" == name) {
+                this->useResourceLoader = fi.as_bool_or_throw(name);
+            } else if ("resourceLoaderPrefix" == name) {
+                this->resourceLoaderPrefix = fi.as_string_nonempty_or_throw(name);
             } else if ("cacheMaxAgeSeconds" == name) {
                 this->cacheMaxAgeSeconds = fi.as_uint32_or_throw(name);
             } else if ("mimeTypes" == name) {
                 for (const sl::json::value& ap : fi.as_array_or_throw(name)) {
-                    auto ja = serverconf::mime_type(ap);
+                    auto ja = server::conf::mime_type(ap);
                     mimeTypes.emplace_back(std::move(ja));
                 }
             } else {
@@ -106,7 +123,7 @@ public:
         }
         if (0 == resource.length()) throw support::exception(TRACEMSG(
                     "Invalid 'documentRoot.resource' field: []"));
-        if (0 == dirPath.length() && 0 == zipPath.length()) throw support::exception(TRACEMSG(
+        if (0 == dirPath.length() && 0 == zipPath.length() && !useResourceLoader) throw support::exception(TRACEMSG(
                     "Invalid 'documentRoot.dirPath' and 'documentRoot.zipPath' fields: [], []"));
     }
 
@@ -117,6 +134,8 @@ public:
             {"dirPath", dirPath},
             {"zipPath", zipPath},
             {"zipInnerPrefix", zipInnerPrefix},
+            {"useResourceLoader", useResourceLoader},
+            {"resourceLoaderPrefix", resourceLoaderPrefix},
             {"cacheMaxAgeSeconds", cacheMaxAgeSeconds},
             {"mimeTypes", [this] {
                 auto ra = sl::ranges::transform(sl::ranges::refwrap(mimeTypes), [](const mime_type& el) {
@@ -132,7 +151,8 @@ public:
     }
 
     document_root clone() const {
-        return document_root(resource, dirPath, zipPath, zipInnerPrefix, cacheMaxAgeSeconds, mimeTypes);
+        return document_root(resource, dirPath, zipPath, zipInnerPrefix,
+                useResourceLoader, resourceLoaderPrefix, cacheMaxAgeSeconds, mimeTypes);
     }
 
 private:
@@ -148,6 +168,7 @@ private:
         std::vector<mime_type> res{};
         res.emplace_back("txt", "text/plain");
         res.emplace_back("js", "text/javascript");
+        res.emplace_back("json", "application/json");
         res.emplace_back("css", "text/css");
         res.emplace_back("html", "text/html");
         res.emplace_back("png", "image/png");
@@ -159,6 +180,7 @@ private:
 };
 
 } // namespace
+}
 }
 
 #endif /* WILTON_SERVER_CONF_DOCUMENT_ROOT_HPP */

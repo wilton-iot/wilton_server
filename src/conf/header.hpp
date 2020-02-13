@@ -32,7 +32,8 @@
 #include "wilton/support/exception.hpp"
 
 namespace wilton {
-namespace serverconf {
+namespace server {
+namespace conf {
 
 class header {
 public:
@@ -83,6 +84,7 @@ public:
 
 
 } // namepspace
+}
 }
 
 #endif /* WILTON_SERVER_CONF_HEADER_HPP */
