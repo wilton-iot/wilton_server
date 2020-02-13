@@ -85,6 +85,7 @@ public:
             wilton_free(loaded);
         });
 
+        set_response_headers(*conf, url_path, resp->get_response());
         resp->write({loaded, loaded_len});
         resp->send(std::move(resp));
     }
