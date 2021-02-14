@@ -28,6 +28,8 @@
 #include <string>
 #include <vector>
 
+#include "utf8.h"
+
 #include "staticlib/config.hpp"
 #include "staticlib/json.hpp"
 #include "staticlib/utils.hpp"
@@ -255,13 +257,30 @@ char* wilton_Request_get_request_data(wilton_Request* request, char** data_out,
     if (nullptr == data_len_out) return wilton::support::alloc_copy(TRACEMSG("Null 'data_len_out' parameter specified"));
     try {
         if (!request->impl().is_websocket()) {
-            const std::string& res = request->impl().get_request_data();
-            *data_out = wilton::support::alloc_copy(res);
-            *data_len_out = static_cast<int>(res.length());
+            const std::string& str_raw = request->impl().get_request_data();
+            if (utf8::is_valid(str_raw.begin(), str_raw.end())) {
+                *data_out = wilton::support::alloc_copy(str_raw);
+                *data_len_out = static_cast<int>(str_raw.length());
+            } else {
+                auto str_utf8 = std::string();
+                utf8::replace_invalid(str_raw.begin(), str_raw.end(), std::back_inserter(str_utf8));
+                *data_out = wilton::support::alloc_copy(str_utf8);
+                *data_len_out = static_cast<int>(str_utf8.length());
+            }
         } else {
             wilton::support::buffer buf = request->impl().get_request_data_buffer();
-            *data_out = buf.data();
-            *data_len_out = static_cast<int>(buf.size_signed());
+            if (utf8::is_valid(buf.begin(), buf.end())) {
+                *data_out = buf.data();
+                *data_len_out = static_cast<int>(buf.size_signed());
+            } else {
+                auto deferred = sl::support::defer([buf]() STATICLIB_NOEXCEPT {
+                    wilton_free(buf.data());
+                });
+                auto str_utf8 = std::string();
+                utf8::replace_invalid(buf.begin(), buf.end(), std::back_inserter(str_utf8));
+                *data_out = wilton::support::alloc_copy(str_utf8);
+                *data_len_out = static_cast<int>(str_utf8.length());
+            }
         }
         return nullptr;
     } catch (const std::exception& e) {

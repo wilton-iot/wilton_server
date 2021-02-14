@@ -46,7 +46,8 @@ set ( ${PROJECT_NAME}_DEPS
         staticlib_utils
         staticlib_mustache
         staticlib_tinydir
-        staticlib_pimpl )
+        staticlib_pimpl
+        utf8cpp )
 staticlib_pkg_check_modules ( ${PROJECT_NAME}_DEPS_PC REQUIRED ${PROJECT_NAME}_DEPS )
 
 # library
