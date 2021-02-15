@@ -23,6 +23,7 @@ set ( staticlib_pion_WILTON_INCLUDE ${WILTON_DIR}/core/include CACHE STRING "" )
 set ( staticlib_pion_WILTON_LOGGING_INCLUDE ${WILTON_DIR}/modules/wilton_logging/include CACHE STRING "" )
 
 # dependencies add
+staticlib_add_subdirectory ( ${STATICLIB_DEPS}/external_utf8cpp )
 if ( STATICLIB_TOOLCHAIN MATCHES "(android|windows|macosx)_.+" )
     staticlib_add_subdirectory ( ${STATICLIB_DEPS}/external_asio )
 endif ( ) 
